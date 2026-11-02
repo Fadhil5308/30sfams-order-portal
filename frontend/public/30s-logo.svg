@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">30sFams</title>
+  <desc id="desc">Logo sementara 30sFams dengan emblem perisai merah, hitam, dan putih.</desc>
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#261316"/>
+      <stop offset="1" stop-color="#080808"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff5963"/>
+      <stop offset="1" stop-color="#a5101d"/>
+    </linearGradient>
+  </defs>
+  <path d="M256 18 455 88v145c0 120-79 207-199 261C136 440 57 353 57 233V88Z" fill="url(#plate)" stroke="url(#red)" stroke-width="18"/>
+  <path d="M256 43 430 105v126c0 105-67 181-174 232C149 412 82 336 82 231V105Z" fill="none" stroke="#f5dfe0" stroke-opacity=".3" stroke-width="3"/>
+  <path d="M112 151h34l-31 66h-34Zm285 0h34l31 66h-37Z" fill="#d92a36" opacity=".92"/>
+  <text x="256" y="280" text-anchor="middle" font-family="Impact, 'Arial Black', sans-serif" font-size="178" font-weight="900" letter-spacing="-8" fill="#fff4f4">30s</text>
+  <path d="M137 316h238" stroke="#dc3944" stroke-width="9" stroke-linecap="round"/>
+  <text x="256" y="371" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="900" letter-spacing="13" fill="#ef737b">FAMS</text>
+  <text x="256" y="414" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="5" fill="#c7aeb0">RESOURCE ORDER</text>
+</svg>

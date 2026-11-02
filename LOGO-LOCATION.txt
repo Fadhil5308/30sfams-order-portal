@@ -1,0 +1,2 @@
+Logo sementara 30sFams: frontend/public/30s-logo.svg
+Ganti file SVG tersebut dengan logo asli berformat SVG dan nama sama, atau ubah src di komponen BrandLogo pada frontend/src/App.jsx jika menggunakan PNG.

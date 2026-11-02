@@ -1,0 +1,260 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ResourceCategory {
+  CLASS1
+  CLASS2
+  CLASS3
+  NARKO
+  VEST
+  ATTACHMENT
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_STATUS
+  ACCOUNT_CREATED
+  ACCOUNT_REGISTRATION
+  ACCOUNT_STATUS
+}
+
+enum GangCashEntryType {
+  OPENING_BALANCE
+  ORDER_INCOME
+  EXPENSE
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+}
+
+enum StockMovementType {
+  RESTOCK
+  ADJUSTMENT
+  RESERVED
+  RELEASED
+  COMPLETED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  username     String        @unique
+  email        String        @unique
+  passwordHash String
+  role         UserRole      @default(USER)
+  isActive     Boolean       @default(true)
+  registrationStatus RegistrationStatus @default(APPROVED)
+  sessionVersion Int @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  orders       Order[]
+  archivedOrders Order[] @relation("OrderArchivedBy")
+  orderStatusChanges OrderStatusHistory[] @relation("OrderStatusChangedBy")
+  stockMovements StockMovement[]
+  activityLogs ActivityLog[]
+  notifications Notification[]
+  spendingPeriods SpendingPeriod[] @relation("SpendingPeriodCreatedBy")
+  cashEntries GangCashEntry[] @relation("GangCashCreatedBy")
+  favorites FavoriteResource[]
+
+  @@index([role])
+  @@index([registrationStatus, isActive])
+}
+
+model Resource {
+  id              String            @id @default(cuid())
+  name            String
+  sku             String            @unique
+  description     String            @default("")
+  imageUrl        String?
+  category        ResourceCategory
+  unit            String            @default("unit")
+  unitPrice       Decimal           @default(0) @db.Decimal(14, 2)
+  stockAvailable  Int               @default(0)
+  stockReserved   Int               @default(0)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  orderItems      OrderItem[]
+  stockMovements  StockMovement[]
+  favorites       FavoriteResource[]
+
+  @@index([category, isActive])
+  @@index([name])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  userId       String
+  status       OrderStatus @default(PENDING)
+  notes        String      @default("")
+  adminNotes   String      @default("")
+  archivedAt   DateTime?
+  archivedById String?
+  totalQuantity Int
+  totalAmount  Decimal     @db.Decimal(14, 2)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  approvedAt   DateTime?
+  completedAt  DateTime?
+  user         User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  archivedBy   User?       @relation("OrderArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  statusHistory OrderStatusHistory[]
+  stockMovements StockMovement[]
+  notifications Notification[]
+  gangCashEntry GangCashEntry?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([archivedAt, createdAt])
+}
+
+model OrderItem {
+  id                 String   @id @default(cuid())
+  orderId            String
+  resourceId         String
+  resourceName       String
+  category           ResourceCategory
+  unit               String
+  unitPrice          Decimal  @db.Decimal(14, 2)
+  quantity           Int
+  lineTotal          Decimal  @db.Decimal(14, 2)
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  resource           Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@index([resourceId])
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(cuid())
+  orderId     String
+  changedById String?
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  note        String      @default("")
+  createdAt   DateTime    @default(now())
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedBy   User?       @relation("OrderStatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([changedById])
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  resourceId  String
+  userId      String?
+  orderId     String?
+  type        StockMovementType
+  quantity    Int
+  note        String            @default("")
+  createdAt   DateTime          @default(now())
+  resource    Resource          @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order       Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([resourceId, createdAt])
+  @@index([orderId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  detail    String
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  orderId   String?
+  type      NotificationType @default(ORDER_STATUS)
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order     Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, createdAt])
+  @@index([orderId])
+}
+
+
+model SpendingPeriod {
+  id          String   @id @default(cuid())
+  name        String
+  startAt     DateTime
+  endAt       DateTime?
+  isCurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("SpendingPeriodCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([isCurrent, startAt])
+  @@index([startAt, endAt])
+}
+
+model GangCashEntry {
+  id          String            @id @default(cuid())
+  type        GangCashEntryType
+  amount      Decimal           @db.Decimal(14, 2)
+  category    String            @default("")
+  description String
+  orderId     String?           @unique
+  createdById String?
+  createdAt   DateTime          @default(now())
+  order       Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdBy   User?             @relation("GangCashCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([createdAt])
+}
+
+
+model FavoriteResource {
+  id         String   @id @default(cuid())
+  userId     String
+  resourceId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId])
+  @@index([userId, createdAt])
+  @@index([resourceId])
+}
