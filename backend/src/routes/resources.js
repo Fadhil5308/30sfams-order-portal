@@ -9,12 +9,38 @@ import { HttpError, asyncHandler, serializeResource } from '../lib/http.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { uploadsDir } from '../lib/uploads.js';
 import { sendDiscordNotification } from '../lib/discord.js';
+import {
+  uploadImage,
+  getImageUrl,
+  deleteImage,
+} from '../lib/storage.js';
 
 const router = Router();
 const imageUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // Maksimal 5 MB per gambar.
+  limits: { fileSize: 4 * 1024 * 1024, files: 1 }, // Maksimal 5 MB per gambar.
 });
+
+// Menampilkan gambar dari Neon Object Storage (Private Bucket)
+router.get(
+  '/images/:key',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const key = req.params.key;
+
+    // Validasi nama file gambar
+    if (!/^[a-f0-9-]{36}\.(jpg|png|webp|gif)$/i.test(key)) {
+      throw new HttpError(400, 'Nama file gambar tidak valid.');
+    }
+
+    if (!objectStorageEnabled) {
+      throw new HttpError(404, 'Penyimpanan gambar tidak tersedia.');
+    }
+
+    const imageUrl = await getImageUrl(key);
+    res.redirect(imageUrl);
+  })
+);
 
 function imageExtension(buffer) {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
@@ -24,18 +50,45 @@ function imageExtension(buffer) {
   return null;
 }
 
+
+const objectStorageEnabled = Boolean(
+  process.env.AWS_ENDPOINT_URL_S3 &&
+  process.env.AWS_ACCESS_KEY_ID &&
+  process.env.AWS_SECRET_ACCESS_KEY &&
+  process.env.AWS_BUCKET_NAME
+);
+
 function storedImagePath(imageUrl) {
   if (!imageUrl || !imageUrl.startsWith('/uploads/')) return null;
+
   const filename = path.basename(imageUrl);
   if (!filename || filename === '.' || filename === '..') return null;
+
   return path.join(uploadsDir, filename);
 }
 
 async function removeStoredImage(imageUrl) {
+  if (!imageUrl) return;
+
+  const storageMatch = imageUrl.match(
+    /^\/api\/resources\/images\/([A-Za-z0-9._-]+)$/
+  );
+
+  if (storageMatch) {
+    await deleteImage(storageMatch[1]);
+    return;
+  }
+
   const target = storedImagePath(imageUrl);
   if (!target) return;
-  try { await unlink(target); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+
+  try {
+    await unlink(target);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
 }
+
 const categories = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT'];
 const createSchema = z.object({
   name: z.string().trim().min(2).max(100),
@@ -99,10 +152,28 @@ router.post('/:id/image', requireAdmin, imageUpload.single('image'), asyncHandle
   const current = await prisma.resource.findUnique({ where: { id: req.params.id } });
   if (!current) throw new HttpError(404, 'Resource tidak ditemukan.');
 
+const filename = `${randomUUID()}.${extension}`;
+const contentTypes = {
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+};
+
+const imageUrl = objectStorageEnabled
+  ? `/api/resources/images/${filename}`
+  : `/uploads/${filename}`;
+
+if (objectStorageEnabled) {
+  await uploadImage(filename, req.file.buffer, contentTypes[extension]);
+} else {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Konfigurasi Neon Object Storage belum lengkap.');
+  }
+
   await mkdir(uploadsDir, { recursive: true });
-  const filename = `${randomUUID()}.${extension}`;
-  const imageUrl = `/uploads/${filename}`;
   await writeFile(path.join(uploadsDir, filename), req.file.buffer, { flag: 'wx' });
+}
 
   let updated;
   try {

@@ -50,8 +50,17 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // Folder gambar disajikan agar katalog dapat menampilkan gambar resource.
-await mkdir(uploadsDir, { recursive: true });
-app.use('/uploads', express.static(uploadsDir, { fallthrough: false, maxAge: '7d', immutable: true }));
+// Folder gambar lokal hanya digunakan saat berjalan di luar Vercel.
+const isVercel = process.env.VERCEL === '1';
+
+if (!isVercel) {
+  await mkdir(uploadsDir, { recursive: true });
+  app.use('/uploads', express.static(uploadsDir, {
+    fallthrough: false,
+    maxAge: '7d',
+    immutable: true,
+  }));
+}
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Terlalu banyak percobaan login/registrasi. Coba lagi 15 menit kemudian.' } });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Batas permintaan API tercapai. Coba lagi beberapa saat.' } });
@@ -75,7 +84,7 @@ app.use((error, _req, res, _next) => {
   if (error instanceof ZodError) {
     return res.status(400).json({ message: 'Data yang dikirim belum valid.', errors: error.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message })) });
   }
-  if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'Ukuran gambar maksimal 5 MB.' });
+if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'Ukuran gambar maksimal 4 MB.' });
   if (error.code === 'P2002') return res.status(409).json({ message: 'Data unik sudah digunakan (misalnya username, email, atau SKU).' });
   if (error.code === 'P2025') return res.status(404).json({ message: 'Data tidak ditemukan.' });
   if (error.code === 'P2034') return res.status(409).json({ message: 'Ada transaksi bersamaan. Muat ulang data lalu coba lagi.' });
@@ -84,12 +93,21 @@ app.use((error, _req, res, _next) => {
   res.status(status).json({ message: status >= 500 ? 'Terjadi kesalahan pada server.' : error.message });
 });
 
-const server = app.listen(port, () => console.log(`API berjalan di http://localhost:${port}`));
+// Ekspor aplikasi agar dapat digunakan oleh Vercel.
+export default app;
 
-async function shutdown() {
-  server.close();
-  await prisma.$disconnect();
-  process.exit(0);
+// Jalankan server lokal hanya ketika tidak berada di Vercel.
+if (!isVercel) {
+  const server = app.listen(port, () => {
+    console.log(`API berjalan di http://localhost:${port}`);
+  });
+
+  async function shutdown() {
+    server.close();
+    await prisma.$disconnect();
+    process.exit(0);
+  }
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
