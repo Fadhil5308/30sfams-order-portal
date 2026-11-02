@@ -21,18 +21,41 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Err
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173').split(',').map((s) => s.trim());
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'https://30sfams-order-portal-vert.vercel.app').split(',').map((s) => s.trim());
 
 const isProduction = process.env.NODE_ENV === 'production';
 const trustProxy = process.env.TRUST_PROXY;
-if (trustProxy) app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : (trustProxy === 'true' ? 1 : trustProxy));
-else if (isProduction) app.set('trust proxy', 1);
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+if (process.env.VERCEL === '1') {
+  app.set('trust proxy', 1);
+} else if (trustProxy) {
+  const normalized = trustProxy.trim().toLowerCase();
+
+  if (normalized === 'true') {
+    app.set('trust proxy', 1);
+  } else if (normalized === 'false') {
+    app.set('trust proxy', false);
+  } else if (/^\d+$/.test(normalized)) {
+    app.set('trust proxy', Number(normalized));
+  } else {
+    app.set('trust proxy', normalized);
+  }
+} else if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
+app.use(helmet({
+  crossOriginResourcePolicy: {
+    policy: 'cross-origin',
+  },
+}));
+
 app.use('/api', (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, private');
   res.setHeader('Pragma', 'no-cache');
   next();
 });
+
 app.use(cors({ origin(origin, callback) {
   if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
   return callback(null, false);
@@ -62,9 +85,9 @@ if (!isVercel) {
   }));
 }
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Terlalu banyak percobaan login/registrasi. Coba lagi 15 menit kemudian.' } });
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Batas permintaan API tercapai. Coba lagi beberapa saat.' } });
-const orderLimiter = rateLimit({ windowMs: 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Terlalu banyak percobaan membuat pesanan. Tunggu satu menit.' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Terlalu banyak percobaan login/registrasi. Coba lagi 15 menit kemudian.' } });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Batas permintaan API tercapai. Coba lagi beberapa saat.' } });
+const orderLimiter = rateLimit({ windowMs: 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Terlalu banyak percobaan membuat pesanan. Tunggu satu menit.' } });
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
