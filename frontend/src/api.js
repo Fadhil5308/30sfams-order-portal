@@ -41,6 +41,7 @@ export async function uploadFile(path, file) {
 export async function api(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     credentials: 'include',
+    cache: 'no-store',
     ...options,
     headers: {
       'Content-Type': 'application/json',
