@@ -412,3 +412,40 @@ body { background: #090909; }
   .resource-meta { font-size: 7px; }
   .resource-meta strong { font-size: 7px; }
 }
+
+
+/* Lightweight pagination and non-blocking page refresh feedback */
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-top: 1px solid #223047;
+  color: #8296af;
+  font-size: 9px;
+}
+.table-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.table-pagination > div > span {
+  white-space: nowrap;
+}
+.page-refresh-indicator {
+  margin: 0 0 9px;
+  color: #8296af;
+  font-size: 9px;
+  text-align: right;
+}
+@media (max-width: 560px) {
+  .table-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .table-pagination > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
