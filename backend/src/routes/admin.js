@@ -257,7 +257,7 @@ router.post('/orders/cancel-active', asyncHandler(async (req, res) => {
     return { pendingCancelled, approvedCancelled, totalCancelled: pendingCancelled + approvedCancelled };
   }, { isolationLevel: 'Serializable', timeout: 30000 });
   void sendDiscordNotification({ title: 'Pembatalan massal pesanan', description: `Admin membatalkan ${result.totalCancelled} pesanan aktif (${result.pendingCancelled} Pending, ${result.approvedCancelled} Approved).`, color: 0xD97706 });
-  res.json({ ...result, message: `${result.totalCancelled} pesanan aktif dibatalkan. Stok cadangan dari ${result.approvedCancelled} pesanan Approved telah dikembalikan.` });
+  res.json({ ...result, message: `${result.totalCancelled} pesanan aktif dibatalkan. Cadangan stok dari pesanan Pending dan Approved yang sudah menggunakan reservasi telah dikembalikan.` });
 }));
 
 router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
@@ -279,7 +279,7 @@ router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
     return tx.order.update({ where: { id: order.id }, data: { status: 'APPROVED', approvedAt: new Date() }, include: orderInclude });
   }, { isolationLevel: 'Serializable' });
   void sendDiscordNotification({ title: 'Pesanan disetujui', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** disetujui. Stok telah dicadangkan.` });
-  res.json({ order: serializeOrder(updated), message: 'Pesanan disetujui dan stok berhasil dicadangkan.' });
+  res.json({ order: serializeOrder(updated), message: 'Pesanan disetujui. Stok tetap diamankan dan tidak dipotong dua kali.' });
 }));
 
 router.post('/orders/:id/reject', asyncHandler(async (req, res) => {
