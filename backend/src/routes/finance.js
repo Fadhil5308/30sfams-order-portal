@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '../generated/prisma/client.ts';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { HttpError, asyncHandler } from '../lib/http.js';
@@ -80,15 +81,34 @@ router.get('/spending', asyncHandler(async (_req, res) => {
       take: 100,
     }),
   ]);
-  const withTotals = [];
-  const batchSize = 5;
-  for (let index = 0; index < periods.length; index += batchSize) {
-    const batch = await Promise.all(periods.slice(index, index + batchSize).map(async (period) => ({
-      ...period,
-      summary: await spendingForPeriod(prisma, period),
-    })));
-    withTotals.push(...batch);
-  }
+  const periodTotals = periods.length
+    ? await prisma.$queryRaw(Prisma.sql`
+        SELECT
+          period.id AS "periodId",
+          COUNT(order_row.id)::int AS "completedOrders",
+          COALESCE(SUM(order_row."totalQuantity"), 0)::int AS "totalQuantity",
+          COALESCE(SUM(order_row."totalAmount"), 0)::double precision AS "totalAmount"
+        FROM (VALUES ${Prisma.join(periods.map((period) => Prisma.sql`(
+          ${period.id}::text,
+          ${period.startAt}::timestamptz,
+          ${period.endAt}::timestamptz
+        )`))}) AS period(id, start_at, end_at)
+        LEFT JOIN "Order" AS order_row
+          ON order_row.status = 'COMPLETED'::"OrderStatus"
+          AND order_row."completedAt" >= period.start_at
+          AND (period.end_at IS NULL OR order_row."completedAt" <= period.end_at)
+        GROUP BY period.id
+      `)
+    : [];
+  const totalsByPeriod = new Map(periodTotals.map((row) => [row.periodId, {
+    completedOrders: Number(row.completedOrders),
+    totalQuantity: Number(row.totalQuantity),
+    totalAmount: Number(row.totalAmount),
+  }]));
+  const withTotals = periods.map((period) => ({
+    ...period,
+    summary: totalsByPeriod.get(period.id) || { completedOrders: 0, totalQuantity: 0, totalAmount: 0 },
+  }));
   const currentPeriod = withTotals.find((period) => period.isCurrent) || null;
   res.json({
     lifetime: {
