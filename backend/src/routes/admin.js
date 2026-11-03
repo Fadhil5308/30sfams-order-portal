@@ -14,6 +14,61 @@ router.get('/integrations/discord', asyncHandler(async (_req, res) => {
   res.json({ configured: isDiscordWebhookConfigured(), message: isDiscordWebhookConfigured() ? 'Webhook Discord terdeteksi di konfigurasi backend.' : 'Webhook Discord belum dikonfigurasi atau format URL tidak valid.' });
 }));
 
+router.get('/dashboard', asyncHandler(async (_req, res) => {
+  const [statusRows, resourceTotals, stockRows, recentOrders] = await Promise.all([
+    prisma.order.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+      _sum: { totalQuantity: true, totalAmount: true },
+    }),
+    prisma.resource.aggregate({
+      where: { isActive: true },
+      _count: { _all: true },
+      _sum: { stockAvailable: true, stockReserved: true },
+    }),
+    prisma.resource.groupBy({
+      by: ['category'],
+      where: { isActive: true },
+      _sum: { stockAvailable: true },
+    }),
+    prisma.order.findMany({
+      where: { archivedAt: null },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        totalQuantity: true,
+        totalAmount: true,
+        user: { select: { username: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+  ]);
+
+  const byStatus = Object.fromEntries(statusRows.map((row) => [row.status, row]));
+  const sum = (status, field) => Number(byStatus[status]?._sum?.[field] || 0);
+  const count = (status) => byStatus[status]?._count?._all || 0;
+
+  res.json({
+    summary: {
+      totalOrders: statusRows.reduce((total, row) => total + row._count._all, 0),
+      pendingOrders: count('PENDING'),
+      approvedOrders: count('APPROVED'),
+      completedOrders: count('COMPLETED'),
+      completedQuantity: sum('COMPLETED', 'totalQuantity'),
+      completedAmount: sum('COMPLETED', 'totalAmount'),
+      activeResources: resourceTotals._count._all,
+    },
+    stock: {
+      available: resourceTotals._sum.stockAvailable || 0,
+      reserved: resourceTotals._sum.stockReserved || 0,
+      byCategory: Object.fromEntries(stockRows.map((row) => [row.category, row._sum.stockAvailable || 0])),
+    },
+    recentOrders: recentOrders.map((order) => ({ ...order, totalAmount: Number(order.totalAmount) })),
+  });
+}));
+
 router.post('/integrations/discord/test', asyncHandler(async (req, res) => {
   if (!isDiscordWebhookConfigured()) throw new HttpError(409, 'Tambahkan DISCORD_WEBHOOK_URL yang valid ke backend/.env, lalu restart backend.');
   const sent = await sendDiscordNotification({
@@ -279,39 +334,51 @@ router.post('/orders/:id/cancel', asyncHandler(async (req, res) => {
 }));
 
 router.get('/reports', asyncHandler(async (_req, res) => {
-  const [counts, completed, approved, pending, categoryRows, topRows, usersCount, resourcesCount, movements] = await Promise.all([
-    prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
-    prisma.order.findMany({ where: { status: 'COMPLETED' }, select: { totalQuantity: true, totalAmount: true } }),
-    prisma.order.findMany({ where: { status: 'APPROVED' }, select: { totalQuantity: true, totalAmount: true } }),
-    prisma.order.findMany({ where: { status: 'PENDING' }, select: { totalQuantity: true, totalAmount: true } }),
-    prisma.orderItem.findMany({ where: { order: { status: 'COMPLETED' } }, select: { category: true, quantity: true, lineTotal: true } }),
-    prisma.orderItem.groupBy({ by: ['resourceId', 'resourceName'], where: { order: { status: 'COMPLETED' } }, _sum: { quantity: true, lineTotal: true }, orderBy: { _sum: { quantity: 'desc' } }, take: 10 }),
+  const [statusRows, categoryRows, topRows, usersCount, resourcesCount, movements] = await Promise.all([
+    prisma.order.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+      _sum: { totalQuantity: true, totalAmount: true },
+    }),
+    prisma.orderItem.groupBy({
+      by: ['category'],
+      where: { order: { status: 'COMPLETED' } },
+      _sum: { quantity: true, lineTotal: true },
+    }),
+    prisma.orderItem.groupBy({
+      by: ['resourceId', 'resourceName'],
+      where: { order: { status: 'COMPLETED' } },
+      _sum: { quantity: true, lineTotal: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 10,
+    }),
     prisma.user.count({ where: { role: 'USER' } }),
     prisma.resource.count({ where: { isActive: true } }),
     prisma.stockMovement.count(),
   ]);
-  const sum = (rows, key) => rows.reduce((acc, row) => acc + Number(row[key]), 0);
-  const countByStatus = Object.fromEntries(counts.map((row) => [row.status, row._count._all]));
-  const categories = {};
-  for (const row of categoryRows) {
-    if (!categories[row.category]) categories[row.category] = { quantity: 0, amount: 0 };
-    categories[row.category].quantity += row.quantity;
-    categories[row.category].amount += Number(row.lineTotal);
-  }
+
+  const byStatus = Object.fromEntries(statusRows.map((row) => [row.status, row]));
+  const count = (status) => byStatus[status]?._count?._all || 0;
+  const sum = (status, field) => Number(byStatus[status]?._sum?.[field] || 0);
+  const categories = Object.fromEntries(categoryRows.map((row) => [row.category, {
+    quantity: row._sum.quantity || 0,
+    amount: Number(row._sum.lineTotal || 0),
+  }]));
+
   res.json({
     summary: {
-      totalOrders: counts.reduce((acc, row) => acc + row._count._all, 0),
-      pendingOrders: countByStatus.PENDING || 0,
-      approvedOrders: countByStatus.APPROVED || 0,
-      completedOrders: countByStatus.COMPLETED || 0,
-      rejectedOrders: countByStatus.REJECTED || 0,
-      cancelledOrders: countByStatus.CANCELLED || 0,
-      completedQuantity: sum(completed, 'totalQuantity'),
-      completedAmount: sum(completed, 'totalAmount'),
-      reservedQuantity: sum(approved, 'totalQuantity'),
-      reservedAmount: sum(approved, 'totalAmount'),
-      pendingQuantity: sum(pending, 'totalQuantity'),
-      pendingAmount: sum(pending, 'totalAmount'),
+      totalOrders: statusRows.reduce((total, row) => total + row._count._all, 0),
+      pendingOrders: count('PENDING'),
+      approvedOrders: count('APPROVED'),
+      completedOrders: count('COMPLETED'),
+      rejectedOrders: count('REJECTED'),
+      cancelledOrders: count('CANCELLED'),
+      completedQuantity: sum('COMPLETED', 'totalQuantity'),
+      completedAmount: sum('COMPLETED', 'totalAmount'),
+      reservedQuantity: sum('APPROVED', 'totalQuantity'),
+      reservedAmount: sum('APPROVED', 'totalAmount'),
+      pendingQuantity: sum('PENDING', 'totalQuantity'),
+      pendingAmount: sum('PENDING', 'totalAmount'),
       totalUsers: usersCount,
       activeResources: resourcesCount,
       stockMovementCount: movements,
