@@ -656,12 +656,15 @@ export default function App() {
     if (!role) return;
     const cacheKey = `${role}:${user?.id || 'unknown'}:${targetPage}`;
     const cachedAt = pageCacheRef.current[cacheKey];
-    if (!force && cachedAt && Date.now() - cachedAt < 90000) return;
+    if (!force && cachedAt && Date.now() - cachedAt < 90000) {
+      if (activePageKeyRef.current === cacheKey) setPageLoading(false);
+      return;
+    }
     if (pageRequestsRef.current[cacheKey]) return pageRequestsRef.current[cacheKey];
 
-    if (!loadedPagesRef.current.has(cacheKey)) setPageLoading(true);
+    if (loadedPagesRef.current.has(cacheKey)) setPageLoading(false);
+    else setPageLoading(true);
     const task = (async () => {
-      try {
       if (role === 'ADMIN') {
         switch (targetPage) {
           case 'dashboard': {
@@ -739,9 +742,6 @@ export default function App() {
           default:
             break;
         }
-      }
-      } finally {
-        // The outer request handler clears the in-flight marker and loading state.
       }
     })();
     pageRequestsRef.current[cacheKey] = task;
