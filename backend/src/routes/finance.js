@@ -80,10 +80,15 @@ router.get('/spending', asyncHandler(async (_req, res) => {
       take: 100,
     }),
   ]);
-  const withTotals = await Promise.all(periods.map(async (period) => ({
-    ...period,
-    summary: await spendingForPeriod(prisma, period),
-  })));
+  const withTotals = [];
+  const batchSize = 5;
+  for (let index = 0; index < periods.length; index += batchSize) {
+    const batch = await Promise.all(periods.slice(index, index + batchSize).map(async (period) => ({
+      ...period,
+      summary: await spendingForPeriod(prisma, period),
+    })));
+    withTotals.push(...batch);
+  }
   const currentPeriod = withTotals.find((period) => period.isCurrent) || null;
   res.json({
     lifetime: {
