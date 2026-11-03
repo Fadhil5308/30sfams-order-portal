@@ -35,6 +35,53 @@ function makeOrderNumber() {
   return `FR-${ymd}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
+// Reserve stock in the same transaction that creates the pending order.
+// Conditional updates prevent two concurrent requests from overselling inventory.
+async function reserveOrderItems(tx, items, orderId, userId, orderNumber) {
+  for (const item of items) {
+    const changed = await tx.resource.updateMany({
+      where: { id: item.resourceId, isActive: true, stockAvailable: { gte: item.quantity } },
+      data: { stockAvailable: { decrement: item.quantity }, stockReserved: { increment: item.quantity } },
+    });
+    if (changed.count !== 1) {
+      const current = await tx.resource.findUnique({ where: { id: item.resourceId }, select: { stockAvailable: true } });
+      throw new HttpError(409, 'Stok ' + item.resourceName + ' tidak mencukupi. Tersedia saat ini: ' + (current?.stockAvailable ?? 0) + '. Pesanan tidak dibuat.');
+    }
+    await tx.stockMovement.create({ data: {
+      resourceId: item.resourceId, userId, orderId, type: 'RESERVED', quantity: item.quantity,
+      note: 'Cadangan otomatis saat pesanan ' + orderNumber + ' dibuat.',
+    } });
+  }
+}
+
+// Legacy Pending orders created before this change have no RESERVED movement.
+// They remain compatible and are skipped when cancelled/rejected.
+async function releaseOrderReservation(tx, order, userId, note) {
+  const movements = await tx.stockMovement.findMany({
+    where: { orderId: order.id, type: 'RESERVED' },
+    select: { resourceId: true, quantity: true },
+  });
+  if (!movements.length) {
+    if (order.status === 'PENDING') return;
+    throw new HttpError(409, 'Cadangan stok ' + order.orderNumber + ' tidak ditemukan. Periksa riwayat stok sebelum melanjutkan.');
+  }
+  const reservedByResource = new Map();
+  for (const movement of movements) reservedByResource.set(movement.resourceId, (reservedByResource.get(movement.resourceId) || 0) + movement.quantity);
+  for (const item of order.items) {
+    if ((reservedByResource.get(item.resourceId) || 0) !== item.quantity) {
+      throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' untuk ' + order.orderNumber + ' tidak sesuai. Tidak ada perubahan yang disimpan.');
+    }
+    const changed = await tx.resource.updateMany({
+      where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
+      data: { stockReserved: { decrement: item.quantity }, stockAvailable: { increment: item.quantity } },
+    });
+    if (changed.count !== 1) throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' tidak konsisten.');
+    await tx.stockMovement.create({ data: {
+      resourceId: item.resourceId, userId, orderId: order.id, type: 'RELEASED', quantity: item.quantity, note,
+    } });
+  }
+}
+
 router.post('/', asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
   const order = await prisma.$transaction(async (tx) => {
@@ -63,30 +110,32 @@ router.post('/', asyncHandler(async (req, res) => {
         lineTotal,
       };
     });
+    const orderNumber = makeOrderNumber();
     const created = await tx.order.create({
       data: {
-        orderNumber: makeOrderNumber(), userId: req.user.id, notes: data.notes,
+        orderNumber, userId: req.user.id, notes: data.notes,
         totalQuantity, totalAmount, items: { create: items },
       },
     });
+    await reserveOrderItems(tx, items, created.id, req.user.id, orderNumber);
     await tx.orderStatusHistory.create({ data: {
       orderId: created.id, changedById: req.user.id, fromStatus: null, toStatus: 'PENDING',
-      note: 'Pesanan dibuat dan menunggu persetujuan admin.',
+      note: 'Pesanan dibuat dan stok langsung dicadangkan sambil menunggu persetujuan admin.',
     } });
     await notifyAdmins(tx, {
       type: 'ORDER_CREATED', title: 'Pesanan baru masuk',
-      message: `${req.user.username} membuat pesanan ${created.orderNumber}. Periksa dan tinjau permintaan ini.`,
+      message: `${req.user.username} membuat pesanan ${created.orderNumber}. Stok sudah dicadangkan; periksa dan tinjau permintaan ini.`,
       orderId: created.id,
     });
     await notifyUsers(tx, [req.user.id], {
       type: 'ORDER_STATUS', title: 'Pesanan berhasil diterima',
-      message: `Pesanan ${created.orderNumber} sudah diterima sistem dan menunggu persetujuan admin.`,
+      message: `Pesanan ${created.orderNumber} sudah diterima dan stok telah dicadangkan sambil menunggu persetujuan admin.`,
       orderId: created.id,
     });
     return tx.order.findUnique({ where: { id: created.id }, include: orderInclude });
   });
   void sendDiscordNotification({ title: 'Pesanan baru 30sFams', description: `Anggota **${req.user.username}** mengirim pesanan **${order.orderNumber}** berisi ${order.totalQuantity} unit dan menunggu persetujuan admin.` });
-  res.status(201).json({ order: serializeOrder(order), message: 'Pesanan terkirim dan menunggu persetujuan admin.' });
+  res.status(201).json({ order: serializeOrder(order), message: 'Pesanan terkirim. Stok berhasil diamankan dan menunggu persetujuan admin.' });
 }));
 
 router.get('/mine', asyncHandler(async (req, res) => {
@@ -133,24 +182,26 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
         unit: resource.unit, unitPrice, quantity: oldItem.quantity, lineTotal,
       };
     });
+    const orderNumber = makeOrderNumber();
     const created = await tx.order.create({
       data: {
-        orderNumber: makeOrderNumber(), userId: req.user.id,
+        orderNumber, userId: req.user.id,
         notes: `Pesanan ulang dari ${previous.orderNumber}. Harga mengikuti harga resource saat ini.`,
         totalQuantity, totalAmount, items: { create: items },
       },
     });
+    await reserveOrderItems(tx, items, created.id, req.user.id, orderNumber);
     await tx.orderStatusHistory.create({ data: {
       orderId: created.id, changedById: req.user.id, fromStatus: null, toStatus: 'PENDING',
-      note: `Pesanan ulang dibuat berdasarkan ${previous.orderNumber}. Harga mengikuti harga resource saat ini.`,
+      note: `Pesanan ulang dibuat berdasarkan ${previous.orderNumber}. Stok langsung dicadangkan.`,
     } });
     await notifyAdmins(tx, {
       type: 'ORDER_CREATED', title: 'Pesanan ulang masuk',
-      message: `${req.user.username} membuat pesanan ulang ${created.orderNumber} berdasarkan ${previous.orderNumber}.`, orderId: created.id,
+      message: `${req.user.username} membuat pesanan ulang ${created.orderNumber} berdasarkan ${previous.orderNumber}. Stok sudah dicadangkan.`, orderId: created.id,
     });
     await notifyUsers(tx, [req.user.id], {
       type: 'ORDER_STATUS', title: 'Pesanan ulang berhasil dikirim',
-      message: `Pesanan ${created.orderNumber} dibuat berdasarkan ${previous.orderNumber} dan menunggu persetujuan admin.`, orderId: created.id,
+      message: `Pesanan ${created.orderNumber} dibuat berdasarkan ${previous.orderNumber}. Stok sudah dicadangkan dan menunggu persetujuan admin.`, orderId: created.id,
     });
     await tx.activityLog.create({ data: {
       userId: req.user.id, action: 'ORDER_REORDERED',
@@ -159,7 +210,7 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     return tx.order.findUnique({ where: { id: created.id }, include: orderInclude });
   }, { isolationLevel: 'Serializable' });
   void sendDiscordNotification({ title: 'Pesanan ulang 30sFams', description: `Anggota **${req.user.username}** mengirim pesanan ulang **${newOrder.orderNumber}** berdasarkan **${previous.orderNumber}**.` });
-  res.status(201).json({ order: serializeOrder(newOrder), message: `Pesanan ulang ${newOrder.orderNumber} berhasil dikirim. Harga menggunakan harga saat ini.` });
+  res.status(201).json({ order: serializeOrder(newOrder), message: `Pesanan ulang ${newOrder.orderNumber} berhasil dikirim dan stok diamankan. Harga menggunakan harga saat ini.` });
 }));
 
 router.post('/:id/cancel', asyncHandler(async (req, res) => {
@@ -167,6 +218,7 @@ router.post('/:id/cancel', asyncHandler(async (req, res) => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { items: true } });
     if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
     if (order.status !== 'PENDING') throw new HttpError(409, 'User hanya dapat membatalkan pesanan yang masih Pending. Hubungi admin untuk pesanan yang sudah disetujui.');
+    await releaseOrderReservation(tx, order, req.user.id, 'Cadangan dikembalikan karena ' + order.orderNumber + ' dibatalkan oleh pemesan.');
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'CANCELLED',
       note: 'Pesanan dibatalkan oleh pemesan sebelum disetujui admin.',
