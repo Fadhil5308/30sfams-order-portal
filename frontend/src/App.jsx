@@ -204,11 +204,15 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
 }
 function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false }) {
   const [orderNotes, setOrderNotes] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 18;
   const filtered = resources.filter((resource) => {
     const matchCategory = category === 'ALL' || resource.category === category;
     const matchSearch = `${resource.name} ${resource.sku} ${resource.description}`.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch && (!favoriteOnly || favoriteIds.includes(resource.id));
   });
+  const visibleResources = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [search, category, resources, favoriteIds, favoriteOnly]);
   const cartItems = resources.filter((resource) => cart[resource.id] > 0);
   const cartQty = cartItems.reduce((sum, resource) => sum + cart[resource.id], 0);
   const cartTotal = cartItems.reduce((sum, resource) => sum + cart[resource.id] * resource.unitPrice, 0);
@@ -223,7 +227,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
   return <>
     <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Resource favorit' : 'Pilih resource'} description={favoriteOnly ? 'Daftar resource favorit yang kamu simpan untuk pemesanan berikutnya.' : 'Temukan item yang dibutuhkan, tentukan jumlah, lalu kirim pesanan untuk ditinjau admin.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
     <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama resource atau SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
-    {filtered.length ? <div className="resource-grid">{filtered.map((resource) => <article className="resource-card" key={resource.id}>
+    {filtered.length ? <div className="resource-grid">{visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
         {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" />}
         <div className="resource-art-grid" /><span>{categoryLabel(resource.category)}</span>
@@ -233,7 +237,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
       <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3><button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'} aria-label={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button><span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'Tidak ada deskripsi untuk resource ini.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
         <div className="resource-action">{cart[resource.id] ? <div className="quantity-control"><button onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} aria-label="Kurangi">−</button><strong>{cart[resource.id]}</strong><button onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={cart[resource.id] >= resource.stockAvailable} aria-label="Tambah">+</button></div> : <button className="button button-outline button-full" disabled={resource.stockAvailable <= 0} onClick={() => changeCart(resource.id, 1, resource.stockAvailable)}><ShoppingCart size={15} /> Tambah pesanan</button>}</div>
       </div>
-    </article>)}</div> : <EmptyState icon={Search} title="Resource tidak ditemukan" detail="Coba ubah kata kunci atau filter kategori." />}
+    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /> : <EmptyState icon={Search} title="Resource tidak ditemukan" detail="Coba ubah kata kunci atau filter kategori." />}
     <div className="checkout-notes panel"><label htmlFor="order-notes"><span>Catatan untuk admin <small>(opsional, maksimal 500 karakter)</small></span><textarea id="order-notes" maxLength={500} rows={2} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Contoh: Mohon proses untuk kebutuhan event malam ini." /></label><div className="notes-counter">{orderNotes.length}/500 karakter</div></div>
     <div className="order-cart-bar"><div><span className="cart-label">KERANJANG PESANAN</span><strong>{number(cartQty)} unit <span>·</span> {money(cartTotal)}</strong></div><button className="button button-primary" disabled={!cartQty || busy} onClick={() => submitOrder(orderNotes)}>{busy ? 'Mengirim...' : 'Kirim pesanan'} <ArrowUpRight size={16} /></button></div>
   </>;
@@ -319,13 +323,17 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState({ name: '', sku: '', category: 'CLASS1', description: '', unit: 'unit', unitPrice: '0', initialStock: '0' });
   const [filter, setFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
   async function create(event) { event.preventDefault(); const ok = await onCreate({ ...draft, unitPrice: Number(draft.unitPrice), initialStock: Number(draft.initialStock) }); if (ok) { setDraft({ name: '', sku: '', category: 'CLASS1', description: '', unit: 'unit', unitPrice: '0', initialStock: '0' }); setShowCreate(false); } }
   const shown = filter === 'ALL' ? resources : resources.filter((resource) => resource.category === filter);
+  const visibleResources = shown.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [filter, resources]);
   return <>
     <SectionHeader eyebrow="INVENTORY CONTROL" title="Manajemen stok" description="Tambah resource, perbarui harga, dan catat setiap perubahan inventory." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Tambah resource</button>} />
     {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>Resource baru</h3><p>Item akan langsung masuk ke katalog setelah disimpan.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Nama resource<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contoh: WEAPON_PISTOL" /></label><label>SKU / kode unik<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Kategori<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Satuan<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Harga per satuan (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Stok awal<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label className="span-two">Deskripsi<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Deskripsi singkat resource" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}>Simpan resource</button></div></form>}
     <div className="panel"><div className="panel-heading"><div><h3>Daftar inventory</h3><p>{number(resources.length)} item terdaftar</p></div><div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(e) => setFilter(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select><ChevronDown size={14} /></div></div>
-      {shown.length ? <div className="table-wrap"><table><thead><tr><th>Resource</th><th>Kategori</th><th>Harga / unit</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Total stok</th><th>Status</th><th>Kelola</th></tr></thead><tbody>{shown.map((resource) => <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Ganti gambar' : 'Upload gambar'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Hapus gambar"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Atur stok</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Ubah harga"><SlidersHorizontal size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Nonaktifkan' : 'Aktifkan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>)}</tbody></table></div> : <EmptyState title="Kategori kosong" detail="Belum ada resource dalam kategori ini." />}
+      {shown.length ? <div className="table-wrap"><table><thead><tr><th>Resource</th><th>Kategori</th><th>Harga / unit</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Total stok</th><th>Status</th><th>Kelola</th></tr></thead><tbody>{visibleResources.map((resource) => <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Ganti gambar' : 'Upload gambar'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Hapus gambar"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Atur stok</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Ubah harga"><SlidersHorizontal size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Nonaktifkan' : 'Aktifkan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={shown.length} onPageChange={setPage} /> : <EmptyState title="Kategori kosong" detail="Belum ada resource dalam kategori ini." />}
     </div>
   </>;
 }
@@ -545,13 +553,17 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
 }
 
 function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart, busy }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 18;
   const favorites = resources.filter((resource) => favoriteIds.includes(resource.id));
+  const visibleFavorites = favorites.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [resources, favoriteIds]);
   function addToCart(resource) {
     setCart((current) => ({ ...current, [resource.id]: Math.min((current[resource.id] || 0) + 1, resource.stockAvailable) }));
   }
   return <>
     <SectionHeader eyebrow="SAVED RESOURCES" title="Resource favorit" description="Simpan item yang sering dipesan agar lebih cepat ditemukan kembali." />
-    {favorites.length ? <div className="resource-grid">{favorites.map((resource) => <article className="resource-card" key={resource.id}>
+    {favorites.length ? <div className="resource-grid">{visibleFavorites.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
         {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" />}
         <div className="resource-art-grid"/><span>{categoryLabel(resource.category)}</span>{!resource.imageUrl && <div className="resource-art-icon"><Package size={30}/></div>}<small>{resource.sku}</small>
@@ -560,7 +572,7 @@ function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart
         <p>{resource.description || 'Tidak ada deskripsi.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
         <button className="button button-primary button-full" disabled={busy || resource.stockAvailable <= 0 || (cart[resource.id] || 0) >= resource.stockAvailable} onClick={() => addToCart(resource)}><ShoppingCart size={15}/> Tambah ke keranjang</button>
       </div>
-    </article>)}</div> : <div className="panel"><EmptyState icon={Star} title="Belum ada resource favorit" detail="Buka katalog lalu tekan ikon bintang pada resource yang ingin kamu simpan."/></div>}
+    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={favorites.length} onPageChange={setPage} /> : <div className="panel"><EmptyState icon={Star} title="Belum ada resource favorit" detail="Buka katalog lalu tekan ikon bintang pada resource yang ingin kamu simpan."/></div>}
   </>;
 }
 
@@ -627,10 +639,14 @@ function exportCashEntries(entries) {
 }
 
 function ActivityPage({ logs, discordStatus, onTestDiscord, busy }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  const visibleLogs = logs.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [logs]);
   return <>
     <SectionHeader eyebrow="AUDIT TRAIL & INTEGRATIONS" title="Aktivitas admin" description="Jejak perubahan resource, stok, status pesanan, dan pengujian integrasi." action={<button className="button button-outline" disabled={busy || !discordStatus?.configured} onClick={onTestDiscord}><Bell size={15}/> Tes Discord</button>} />
     <div className="panel integration-status-panel"><div className="panel-heading"><div><h3>Integrasi Discord</h3><p>URL webhook hanya disimpan di backend/.env dan tidak ditampilkan di browser.</p></div><div className={`stock-tag ${discordStatus?.configured ? 'in-stock' : 'out-stock'}`}>{discordStatus?.configured ? 'Webhook terkonfigurasi' : 'Belum dikonfigurasi'}</div></div><p className="muted-copy">{discordStatus?.message || 'Memeriksa konfigurasi Discord...'}</p><small>Untuk mengaktifkan, isi DISCORD_WEBHOOK_URL di backend/.env, lalu restart backend. Gunakan channel Discord privat yang hanya dapat diakses petinggi/admin.</small></div>
-    <div className="panel">{logs.length ? <div className="activity-list">{logs.map((log) => <div className="activity-row" key={log.id}><div className="activity-icon"><Activity size={17} /></div><div className="activity-content"><strong>{log.detail}</strong><span>{log.user?.username || 'System'} · {log.action}</span></div><time>{dateTime(log.createdAt)}</time></div>)}</div> : <EmptyState icon={Activity} title="Belum ada aktivitas" detail="Aktivitas admin akan tercatat di sini." />}</div>
+    <div className="panel">{logs.length ? <div className="activity-list">{visibleLogs.map((log) => <div className="activity-row" key={log.id}><div className="activity-icon"><Activity size={17} /></div><div className="activity-content"><strong>{log.detail}</strong><span>{log.user?.username || 'System'} · {log.action}</span></div><time>{dateTime(log.createdAt)}</time></div>)}</div><DataPagination page={page} pageSize={pageSize} total={logs.length} onPageChange={setPage} /> : <EmptyState icon={Activity} title="Belum ada aktivitas" detail="Aktivitas admin akan tercatat di sini." />}</div>
   </>;
 }
 
