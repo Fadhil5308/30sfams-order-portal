@@ -88,6 +88,11 @@ const orderInclude = {
   archivedBy: { select: { id: true, username: true } },
 };
 
+const orderListInclude = {
+  items: true,
+  user: { select: { username: true } },
+};
+
 router.get('/orders', asyncHandler(async (req, res) => {
   const statusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED']).optional();
   const view = z.enum(['active', 'archive']).default('active').parse(req.query.view ?? 'active');
@@ -95,9 +100,15 @@ router.get('/orders', asyncHandler(async (req, res) => {
   const where = view === 'archive' ? { archivedAt: { not: null } } : { archivedAt: null };
   if (status) where.status = status;
   const orders = await prisma.order.findMany({
-    where, include: orderInclude, orderBy: view === 'archive' ? { archivedAt: 'desc' } : { createdAt: 'desc' }, take: 1000,
+    where, include: orderListInclude, orderBy: view === 'archive' ? { archivedAt: 'desc' } : { createdAt: 'desc' }, take: 1000,
   });
   res.json({ orders: orders.map(serializeOrder), view });
+}));
+
+router.get('/orders/:id', asyncHandler(async (req, res) => {
+  const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: orderInclude });
+  if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+  res.json({ order: serializeOrder(order) });
 }));
 
 // Arsip memindahkan pesanan keluar dari daftar aktif tanpa mengubah status, stok, atau invoice.
