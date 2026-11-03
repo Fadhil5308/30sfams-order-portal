@@ -17,6 +17,11 @@ const orderInclude = {
   statusHistory: { include: { changedBy: { select: { username: true, role: true } } }, orderBy: { createdAt: 'asc' } },
 };
 
+const orderListInclude = {
+  items: true,
+  user: { select: { username: true } },
+};
+
 const createOrderSchema = z.object({
   items: z.array(z.object({ resourceId: z.string().min(1), quantity: z.coerce.number().int().min(1).max(100_000) })).min(1).max(50),
   notes: z.string().trim().max(500).optional().default(''),
@@ -86,9 +91,18 @@ router.post('/', asyncHandler(async (req, res) => {
 
 router.get('/mine', asyncHandler(async (req, res) => {
   const orders = await prisma.order.findMany({
-    where: { userId: req.user.id }, include: orderInclude, orderBy: { createdAt: 'desc' }, take: 200,
+    where: { userId: req.user.id }, include: orderListInclude, orderBy: { createdAt: 'desc' }, take: 200,
   });
   res.json({ orders: orders.map(serializeOrder) });
+}));
+
+router.get('/:id', asyncHandler(async (req, res) => {
+  const order = await prisma.order.findFirst({
+    where: { id: req.params.id, userId: req.user.id },
+    include: orderInclude,
+  });
+  if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+  res.json({ order: serializeOrder(order) });
 }));
 
 router.post('/:id/reorder', asyncHandler(async (req, res) => {
