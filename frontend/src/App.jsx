@@ -680,6 +680,7 @@ export default function App() {
   const [notice, setNotice] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const isAdmin = user?.role === 'ADMIN';
   const pageCacheRef = useRef({});
@@ -830,6 +831,20 @@ export default function App() {
   const navItems = isAdmin ? adminNav : userNav;
   const pageTitle = useMemo(() => navItems.find((item) => item.key === page)?.label || 'Dashboard', [navItems, page]);
   const setNoticeSafe = (value) => { setNotice(value); if (value) window.setTimeout(() => setNotice(null), 5500); };
+
+  async function openOrderDetail(order) {
+    setSelectedOrder(null);
+    setDetailLoading(true);
+    try {
+      const endpoint = user?.role === 'ADMIN' ? `/admin/orders/${order.id}` : `/orders/${order.id}`;
+      const result = await api(endpoint);
+      setSelectedOrder(result.order);
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+    } finally {
+      setDetailLoading(false);
+    }
+  }
 
   async function signOut() {
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* local state is still cleared */ }
@@ -1135,13 +1150,13 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && !isAdmin && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />}
-        {page === 'my-orders' && !isAdmin && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Buka detail untuk melihat item, catatan, invoice, dan riwayat status pesanan." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={orderAction} onDetail={setSelectedOrder} onReorder={reorderOrder} busy={busy} /></div></>}
+        {page === 'my-orders' && !isAdmin && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Buka detail untuk melihat item, catatan, invoice, dan riwayat status pesanan." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={resources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
         {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
         {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
-        {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="Semua pesanan" description="Tinjau permintaan, setujui reservasi stok, dan tandai Completed langsung setelah resource diserahkan. Reservasi tidak kedaluwarsa otomatis; admin mengelolanya secara manual." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Batalkan order aktif</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Arsipkan semua</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} pesanan aktif</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetail={setSelectedOrder} busy={busy} /></div></>}
-        {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Arsip pesanan" description="Semua pesanan yang diarsipkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export arsip CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} arsip</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetail={setSelectedOrder} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
+        {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="Semua pesanan" description="Tinjau permintaan, setujui reservasi stok, dan tandai Completed langsung setelah resource diserahkan. Reservasi tidak kedaluwarsa otomatis; admin mengelolanya secara manual." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Batalkan order aktif</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Arsipkan semua</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} pesanan aktif</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetail={openOrderDetail} busy={busy} /></div></>}
+        {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Arsip pesanan" description="Semua pesanan yang diarsipkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export arsip CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} arsip</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetail={openOrderDetail} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
         {page === 'reports' && isAdmin && <Reports reports={reports} />}
         {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onApprove={approveRegistration} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
@@ -1149,6 +1164,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {((isAdmin && ['catalog','my-orders','favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
         </>}
       </div>
+      {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Memuat detail pesanan...</section></div>}
       <OrderDetailModal order={selectedOrder} isAdmin={isAdmin} onClose={() => setSelectedOrder(null)} onPrint={printSelectedOrder} />
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} onSubmit={changePassword} busy={busy} />}
       <footer className="main-footer"><span>© {new Date().getFullYear()} 30sFams</span><span>30sFams Resource Orders <i /> Private workspace</span></footer>
