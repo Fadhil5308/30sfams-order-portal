@@ -93,6 +93,70 @@ const orderListInclude = {
   user: { select: { username: true } },
 };
 
+
+// Check/secure reservations for approval. Pending orders created before automatic
+// reservation have no RESERVED movement, so they are reserved here as a legacy fallback.
+async function ensureOrderReservation(tx, order, userId) {
+  const movements = await tx.stockMovement.findMany({
+    where: { orderId: order.id, type: 'RESERVED' },
+    select: { resourceId: true, quantity: true },
+  });
+  if (movements.length) {
+    const reservedByResource = new Map();
+    for (const movement of movements) reservedByResource.set(movement.resourceId, (reservedByResource.get(movement.resourceId) || 0) + movement.quantity);
+    for (const item of order.items) {
+      if ((reservedByResource.get(item.resourceId) || 0) !== item.quantity) {
+        throw new HttpError(409, 'Cadangan stok untuk ' + item.resourceName + ' tidak sesuai. Pesanan belum disetujui.');
+      }
+    }
+    return false;
+  }
+  for (const item of order.items) {
+    const changed = await tx.resource.updateMany({
+      where: { id: item.resourceId, isActive: true, stockAvailable: { gte: item.quantity } },
+      data: { stockAvailable: { decrement: item.quantity }, stockReserved: { increment: item.quantity } },
+    });
+    if (changed.count !== 1) {
+      const current = await tx.resource.findUnique({ where: { id: item.resourceId }, select: { stockAvailable: true } });
+      throw new HttpError(409, 'Stok ' + item.resourceName + ' tidak mencukupi. Tersedia saat ini: ' + (current?.stockAvailable ?? 0) + '. Pesanan belum disetujui.');
+    }
+    await tx.stockMovement.create({ data: {
+      resourceId: item.resourceId, userId, orderId: order.id, type: 'RESERVED', quantity: item.quantity,
+      note: 'Cadangan stok untuk pesanan lama ' + order.orderNumber + ' saat disetujui admin.',
+    } });
+  }
+  return true;
+}
+
+// Return reserved stock on rejection/cancellation. Legacy Pending orders may not
+// have a reservation yet; those are allowed to pass without changing inventory.
+async function releaseOrderReservation(tx, order, userId, note) {
+  const movements = await tx.stockMovement.findMany({
+    where: { orderId: order.id, type: 'RESERVED' },
+    select: { resourceId: true, quantity: true },
+  });
+  if (!movements.length) {
+    if (order.status === 'PENDING') return false;
+    throw new HttpError(409, 'Cadangan stok ' + order.orderNumber + ' tidak ditemukan. Periksa riwayat stok sebelum melanjutkan.');
+  }
+  const reservedByResource = new Map();
+  for (const movement of movements) reservedByResource.set(movement.resourceId, (reservedByResource.get(movement.resourceId) || 0) + movement.quantity);
+  for (const item of order.items) {
+    if ((reservedByResource.get(item.resourceId) || 0) !== item.quantity) {
+      throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' untuk ' + order.orderNumber + ' tidak sesuai. Tidak ada perubahan yang disimpan.');
+    }
+    const changed = await tx.resource.updateMany({
+      where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
+      data: { stockReserved: { decrement: item.quantity }, stockAvailable: { increment: item.quantity } },
+    });
+    if (changed.count !== 1) throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' tidak konsisten.');
+    await tx.stockMovement.create({ data: {
+      resourceId: item.resourceId, userId, orderId: order.id, type: 'RELEASED', quantity: item.quantity, note,
+    } });
+  }
+  return true;
+}
+
 router.get('/orders', asyncHandler(async (req, res) => {
   const statusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED']).optional();
   const view = z.enum(['active', 'archive']).default('active').parse(req.query.view ?? 'active');
@@ -168,23 +232,9 @@ router.post('/orders/cancel-active', asyncHandler(async (req, res) => {
     let pendingCancelled = 0;
     let approvedCancelled = 0;
     for (const order of candidates) {
-      if (order.status === 'APPROVED') {
-        for (const item of order.items) {
-          const changed = await tx.resource.updateMany({
-            where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
-            data: { stockReserved: { decrement: item.quantity }, stockAvailable: { increment: item.quantity } },
-          });
-          if (changed.count !== 1) throw new HttpError(409, `Cadangan stok ${item.resourceName} untuk ${order.orderNumber} tidak konsisten. Seluruh pembatalan dibatalkan, tidak ada perubahan yang disimpan.`);
-          await tx.stockMovement.create({ data: {
-            resourceId: item.resourceId, userId: req.user.id, orderId: order.id,
-            type: 'RELEASED', quantity: item.quantity,
-            note: `Cadangan dilepas karena pembatalan massal ${order.orderNumber}. ${data.reason}`.trim(),
-          } });
-        }
-        approvedCancelled += 1;
-      } else {
-        pendingCancelled += 1;
-      }
+      await releaseOrderReservation(tx, order, req.user.id, `Cadangan dilepas karena pembatalan massal ${order.orderNumber}. ${data.reason}`.trim());
+      if (order.status === 'APPROVED') approvedCancelled += 1;
+      else pendingCancelled += 1;
       const note = data.reason || 'Pembatalan massal oleh admin.';
       const changedOrder = await tx.order.updateMany({
         where: { id: order.id, archivedAt: null, status: order.status },
@@ -216,26 +266,15 @@ router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
     if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
     if (order.status !== 'PENDING') throw new HttpError(409, 'Hanya pesanan Pending yang dapat disetujui.');
 
-    for (const item of order.items) {
-      // Atomic conditional update: only reserve if enough stock is still available.
-      const changed = await tx.resource.updateMany({
-        where: { id: item.resourceId, isActive: true, stockAvailable: { gte: item.quantity } },
-        data: { stockAvailable: { decrement: item.quantity }, stockReserved: { increment: item.quantity } },
-      });
-      if (changed.count !== 1) throw new HttpError(409, `Stok ${item.resourceName} tidak mencukupi. Pesanan belum disetujui.`);
-      await tx.stockMovement.create({ data: {
-        resourceId: item.resourceId, userId: req.user.id, orderId: order.id,
-        type: 'RESERVED', quantity: item.quantity, note: `Cadangan untuk ${order.orderNumber}`,
-      } });
-    }
+    await ensureOrderReservation(tx, order, req.user.id);
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_APPROVED', detail: `Menyetujui pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'APPROVED',
-      note: 'Pesanan disetujui admin dan stok berhasil dicadangkan.',
+      note: 'Pesanan disetujui admin. Stok yang telah dicadangkan tetap diamankan.',
     } });
     await notifyOrderOwner(tx, order, {
       type: 'ORDER_STATUS', title: 'Pesanan disetujui',
-      message: `Pesanan ${order.orderNumber} disetujui. Stok sudah dicadangkan dan menunggu penyerahan resource.`,
+      message: `Pesanan ${order.orderNumber} disetujui. Stok tetap diamankan dan menunggu penyerahan resource.`,
     });
     return tx.order.update({ where: { id: order.id }, data: { status: 'APPROVED', approvedAt: new Date() }, include: orderInclude });
   }, { isolationLevel: 'Serializable' });
@@ -249,6 +288,7 @@ router.post('/orders/:id/reject', asyncHandler(async (req, res) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id } });
     if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
     if (order.status !== 'PENDING') throw new HttpError(409, 'Hanya pesanan Pending yang dapat ditolak.');
+    await releaseOrderReservation(tx, { ...order, items: await tx.orderItem.findMany({ where: { orderId: order.id } }) }, req.user.id, 'Cadangan dikembalikan karena pesanan ' + order.orderNumber + ' ditolak admin.');
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_REJECTED', detail: `Menolak pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'REJECTED',
@@ -316,19 +356,7 @@ router.post('/orders/:id/cancel', asyncHandler(async (req, res) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
     if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
     if (!['PENDING', 'APPROVED'].includes(order.status)) throw new HttpError(409, 'Pesanan ini tidak dapat dibatalkan pada status sekarang.');
-    if (order.status === 'APPROVED') {
-      for (const item of order.items) {
-        const changed = await tx.resource.updateMany({
-          where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
-          data: { stockReserved: { decrement: item.quantity }, stockAvailable: { increment: item.quantity } },
-        });
-        if (changed.count !== 1) throw new HttpError(409, `Cadangan stok ${item.resourceName} tidak konsisten.`);
-        await tx.stockMovement.create({ data: {
-          resourceId: item.resourceId, userId: req.user.id, orderId: order.id,
-          type: 'RELEASED', quantity: item.quantity, note: `Cadangan dilepas karena ${order.orderNumber} dibatalkan`,
-        } });
-      }
-    }
+    await releaseOrderReservation(tx, order, req.user.id, `Cadangan dilepas karena ${order.orderNumber} dibatalkan oleh admin.`);
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_CANCELLED', detail: `Membatalkan pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: order.status, toStatus: 'CANCELLED',
