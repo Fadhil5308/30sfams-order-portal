@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, Archive, ArrowDownToLine, ArrowUpRight, Bell, Boxes, ChartNoAxesCombined,
   Check, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardList, Clock3,
@@ -644,11 +644,24 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const isAdmin = user?.role === 'ADMIN';
+  const pageCacheRef = useRef({});
+  const pageRequestsRef = useRef({});
+  const loadedPagesRef = useRef(new Set());
+  const activePageKeyRef = useRef('');
+  const currentPageKey = user ? `${user.role}:${user.id}:${page}` : '';
+  activePageKeyRef.current = currentPageKey;
+  const [loadedPages, setLoadedPages] = useState({});
 
-  const loadPageData = useCallback(async (targetPage, role = user?.role) => {
+  const loadPageData = useCallback(async (targetPage, role = user?.role, force = false) => {
     if (!role) return;
-    setPageLoading(true);
-    try {
+    const cacheKey = `${role}:${user?.id || 'unknown'}:${targetPage}`;
+    const cachedAt = pageCacheRef.current[cacheKey];
+    if (!force && cachedAt && Date.now() - cachedAt < 90000) return;
+    if (pageRequestsRef.current[cacheKey]) return pageRequestsRef.current[cacheKey];
+
+    if (!loadedPagesRef.current.has(cacheKey)) setPageLoading(true);
+    const task = (async () => {
+      try {
       if (role === 'ADMIN') {
         switch (targetPage) {
           case 'dashboard': {
@@ -727,14 +740,29 @@ export default function App() {
             break;
         }
       }
+      } finally {
+        // The outer request handler clears the in-flight marker and loading state.
+      }
+    })();
+    pageRequestsRef.current[cacheKey] = task;
+    try {
+      await task;
+      pageCacheRef.current[cacheKey] = Date.now();
+      loadedPagesRef.current.add(cacheKey);
+      setLoadedPages((current) => current[cacheKey] ? current : { ...current, [cacheKey]: true });
     } finally {
-      setPageLoading(false);
+      if (pageRequestsRef.current[cacheKey] === task) delete pageRequestsRef.current[cacheKey];
+      if (activePageKeyRef.current === cacheKey) setPageLoading(false);
     }
-  }, [user?.role]);
+  }, [user?.id, user?.role]);
 
   const refresh = useCallback(async (role = user?.role) => {
-    await loadPageData(page, role);
-  }, [loadPageData, page, user?.role]);
+    const cachePrefix = `${role || user?.role}:${user?.id || 'unknown'}:`;
+    for (const key of Object.keys(pageCacheRef.current)) {
+      if (key.startsWith(cachePrefix)) delete pageCacheRef.current[key];
+    }
+    await loadPageData(page, role, true);
+  }, [loadPageData, page, user?.id, user?.role]);
 
   const refreshNotifications = useCallback(async () => {
     if (!user?.id) return;
@@ -755,7 +783,9 @@ export default function App() {
   useEffect(() => {
     if (!user) return undefined;
     refreshNotifications().catch(() => {});
-    const timer = window.setInterval(() => refreshNotifications().catch(() => {}), 60000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refreshNotifications().catch(() => {});
+    }, 120000);
     return () => window.clearInterval(timer);
   }, [user, refreshNotifications]);
 
@@ -765,6 +795,7 @@ export default function App() {
 
   async function signOut() {
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* local state is still cleared */ }
+    pageCacheRef.current = {}; pageRequestsRef.current = {}; loadedPagesRef.current.clear(); setLoadedPages({});
     setUser(null); setResources([]); setOrders([]); setArchivedOrders([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
   }
 
@@ -1062,7 +1093,8 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
     <main className="main-area">
       <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button><div className="breadcrumb"><span>30sFams</span><span>/</span><strong>{pageTitle}</strong></div></div><div className="topbar-right"><div className="system-status"><span className="live-dot" /> System operational</div><NotificationCenter notifications={notifications} unreadCount={unreadCount} onReadAll={markAllNotificationsRead} onSelect={selectNotification} /><div className="topbar-divider" /><div className="topbar-profile"><div className="user-avatar small">{user.username.slice(0, 1).toUpperCase()}</div><div><strong>{user.username}</strong><span>{isAdmin ? 'Admin' : 'User'}</span></div></div></div></header>
       <div className="content-area"><Notice notice={notice} clear={() => setNotice(null)} />
-        {pageLoading ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
+        {pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
+        {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && !isAdmin && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />}
         {page === 'my-orders' && !isAdmin && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Buka detail untuk melihat item, catatan, invoice, dan riwayat status pesanan." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={orderAction} onDetail={setSelectedOrder} onReorder={reorderOrder} busy={busy} /></div></>}
