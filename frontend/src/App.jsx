@@ -149,45 +149,59 @@ function SectionHeader({ eyebrow, title, description, action }) {
   return <div className="section-header"><div><div className="section-kicker">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action}</div>;
 }
 
-function Dashboard({ user, resources, orders, reports, goTo }) {
+function Dashboard({ user, resources = [], orders = [], reports, dashboardData, goTo }) {
   const isAdmin = user.role === 'ADMIN';
   const pending = orders.filter((order) => order.status === 'PENDING').length;
   const completed = orders.filter((order) => order.status === 'COMPLETED');
   const completedQty = completed.reduce((sum, order) => sum + order.totalQuantity, 0);
   const completedAmount = completed.reduce((sum, order) => sum + order.totalAmount, 0);
-  const totalAvailable = resources.reduce((sum, resource) => sum + resource.stockAvailable, 0);
-  const totalReserved = resources.reduce((sum, resource) => sum + resource.stockReserved, 0);
-  return <>
-    <SectionHeader eyebrow={isAdmin ? 'ADMIN OVERVIEW' : 'PERSONAL OVERVIEW'} title={`Selamat datang, ${user.username}`} description={isAdmin ? 'Pantau inventory, permintaan, dan aktivitas resource server.' : 'Ringkasan resource dan aktivitas pemesanan akun Anda.'} action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}</div>} />
-    {isAdmin ? <>
+
+  if (isAdmin) {
+    const summary = dashboardData?.summary || reports?.summary || {};
+    const stock = dashboardData?.stock || {};
+    const byCategory = stock.byCategory || {};
+    const totalAvailable = Number(stock.available ?? resources.reduce((sum, item) => sum + item.stockAvailable, 0));
+    const totalReserved = Number(stock.reserved ?? resources.reduce((sum, item) => sum + item.stockReserved, 0));
+    const recentOrders = dashboardData?.recentOrders || orders;
+    const categoryValues = CATEGORIES.map((category) => Number(
+      byCategory[category] ?? resources.filter((item) => item.category === category).reduce((sum, item) => sum + item.stockAvailable, 0)
+    ));
+    const maxCategoryStock = Math.max(1, ...categoryValues);
+
+    return <>
+      <SectionHeader eyebrow="ADMIN OVERVIEW" title={`Selamat datang, ${user.username}`} description="Pantau inventory, permintaan, dan aktivitas resource server." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}</div>} />
       <div className="stats-grid">
-        <StatCard label="Total jenis resource" value={number(reports?.summary?.activeResources ?? resources.length)} detail="Resource aktif" icon={Boxes} tone="blue" />
+        <StatCard label="Total jenis resource" value={number(summary.activeResources ?? resources.length)} detail="Resource aktif" icon={Boxes} tone="blue" />
         <StatCard label="Stok tersedia" value={number(totalAvailable)} detail={`${number(totalReserved)} unit sedang dicadangkan`} icon={Package} tone="green" />
-        <StatCard label="Pesanan menunggu" value={number(reports?.summary?.pendingOrders || 0)} detail="Perlu ditinjau admin" icon={ClipboardList} tone="orange" />
-        <StatCard label="Total nilai selesai" value={money(reports?.summary?.completedAmount || 0)} detail={`${number(reports?.summary?.completedQuantity || 0)} unit terjual`} icon={CircleDollarSign} tone="purple" />
+        <StatCard label="Pesanan menunggu" value={number(summary.pendingOrders ?? pending)} detail="Perlu ditinjau admin" icon={ClipboardList} tone="orange" />
+        <StatCard label="Total nilai selesai" value={money(summary.completedAmount ?? completedAmount)} detail={`${number(summary.completedQuantity ?? completedQty)} unit terjual`} icon={CircleDollarSign} tone="purple" />
       </div>
       <div className="dashboard-grid">
         <div className="panel"><div className="panel-heading"><div><h3>Pesanan terbaru</h3><p>Permintaan resource yang masuk</p></div><button className="text-button" onClick={() => goTo('admin-orders')}>Lihat semua <ArrowUpRight size={15} /></button></div>
-          {orders.slice(0, 5).length ? <div className="compact-list">{orders.slice(0, 5).map((order) => <div className="compact-row" key={order.id}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'User'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="Belum ada pesanan" detail="Pesanan pengguna akan muncul di sini." />}
+          {recentOrders.slice(0, 5).length ? <div className="compact-list">{recentOrders.slice(0, 5).map((order) => <div className="compact-row" key={order.id}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'User'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="Belum ada pesanan" detail="Pesanan pengguna akan muncul di sini." />}
         </div>
         <div className="panel"><div className="panel-heading"><div><h3>Stok per kategori</h3><p>Jumlah stok tersedia saat ini</p></div><button className="icon-button" onClick={() => goTo('inventory')} aria-label="Buka inventory"><ArrowUpRight size={17} /></button></div>
-          <div className="category-stock">{CATEGORIES.map((category) => { const qty = resources.filter((item) => item.category === category).reduce((sum, item) => sum + item.stockAvailable, 0); const max = Math.max(1, ...CATEGORIES.map((c) => resources.filter((item) => item.category === c).reduce((sum, item) => sum + item.stockAvailable, 0))); return <div className="category-stock-row" key={category}><div><span>{categoryLabel(category)}</span><strong>{number(qty)}</strong></div><div className="progress-track"><span style={{ width: `${Math.max(3, qty / max * 100)}%` }} /></div></div>; })}</div>
+          <div className="category-stock">{CATEGORIES.map((category, index) => { const qty = categoryValues[index]; return <div className="category-stock-row" key={category}><div><span>{categoryLabel(category)}</span><strong>{number(qty)}</strong></div><div className="progress-track"><span style={{ width: `${Math.max(3, qty / maxCategoryStock * 100)}%` }} /></div></div>; })}</div>
         </div>
       </div>
-    </> : <>
-      <div className="stats-grid">
-        <StatCard label="Resource tersedia" value={number(resources.length)} detail="Jenis item dalam katalog" icon={Boxes} tone="blue" />
-        <StatCard label="Pesanan menunggu" value={number(pending)} detail="Menunggu persetujuan admin" icon={Clock3} tone="orange" />
-        <StatCard label="Unit selesai dibeli" value={number(completedQty)} detail="Akumulasi pesanan selesai" icon={Package} tone="green" />
-        <StatCard label="Total nominal pembelian" value={money(completedAmount)} detail="Hanya pesanan selesai" icon={CircleDollarSign} tone="purple" />
-      </div>
-      <div className="panel"><div className="panel-heading"><div><h3>Riwayat pesanan terbaru</h3><p>Status pesanan dari akun Anda</p></div><button className="text-button" onClick={() => goTo('my-orders')}>Lihat semua <ArrowUpRight size={15} /></button></div>
-        {orders.slice(0, 6).length ? <div className="table-wrap"><table><thead><tr><th>Nomor pesanan</th><th>Tanggal</th><th>Jumlah</th><th>Total nominal</th><th>Status</th></tr></thead><tbody>{orders.slice(0, 6).map((order) => <tr key={order.id}><td className="strong-cell">{order.orderNumber}</td><td>{dateTime(order.createdAt)}</td><td>{number(order.totalQuantity)} unit</td><td>{money(order.totalAmount)}</td><td><StatusPill status={order.status} /></td></tr>)}</tbody></table></div> : <EmptyState icon={ShoppingCart} title="Belum ada transaksi" detail="Pilih resource dari katalog untuk membuat pesanan pertama." />}
-      </div>
-    </>}
+    </>;
+  }
+
+  const totalAvailable = resources.reduce((sum, resource) => sum + resource.stockAvailable, 0);
+  const totalReserved = resources.reduce((sum, resource) => sum + resource.stockReserved, 0);
+  return <>
+    <SectionHeader eyebrow="PERSONAL OVERVIEW" title={`Selamat datang, ${user.username}`} description="Ringkasan resource dan aktivitas pemesanan akun Anda." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}</div>} />
+    <div className="stats-grid">
+      <StatCard label="Resource tersedia" value={number(resources.length)} detail="Jenis item dalam katalog" icon={Boxes} tone="blue" />
+      <StatCard label="Pesanan menunggu" value={number(pending)} detail="Menunggu persetujuan admin" icon={Clock3} tone="orange" />
+      <StatCard label="Unit selesai dibeli" value={number(completedQty)} detail="Akumulasi pesanan selesai" icon={Package} tone="green" />
+      <StatCard label="Total nominal pembelian" value={money(completedAmount)} detail="Hanya pesanan selesai" icon={CircleDollarSign} tone="purple" />
+    </div>
+    <div className="panel"><div className="panel-heading"><div><h3>Riwayat pesanan terbaru</h3><p>Status pesanan dari akun Anda</p></div><button className="text-button" onClick={() => goTo('my-orders')}>Lihat semua <ArrowUpRight size={15} /></button></div>
+      {orders.slice(0, 6).length ? <div className="table-wrap"><table><thead><tr><th>Nomor pesanan</th><th>Tanggal</th><th>Jumlah</th><th>Total nominal</th><th>Status</th></tr></thead><tbody>{orders.slice(0, 6).map((order) => <tr key={order.id}><td className="strong-cell">{order.orderNumber}</td><td>{dateTime(order.createdAt)}</td><td>{number(order.totalQuantity)} unit</td><td>{money(order.totalAmount)}</td><td><StatusPill status={order.status} /></td></tr>)}</tbody></table></div> : <EmptyState icon={ShoppingCart} title="Belum ada transaksi" detail="Pilih resource dari katalog untuk membuat pesanan pertama." />}
+    </div>
   </>;
 }
-
 function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false }) {
   const [orderNotes, setOrderNotes] = useState('');
   const filtered = resources.filter((resource) => {
@@ -605,6 +619,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
   const [page, setPage] = useState('dashboard');
+  const [pageLoading, setPageLoading] = useState(false);
+  const [dashboardData, setDashboardData] = useState(null);
   const [resources, setResources] = useState([]);
   const [orders, setOrders] = useState([]);
   const [archivedOrders, setArchivedOrders] = useState([]);
@@ -629,18 +645,96 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const isAdmin = user?.role === 'ADMIN';
 
-  const refresh = useCallback(async (role = user?.role) => {
+  const loadPageData = useCallback(async (targetPage, role = user?.role) => {
     if (!role) return;
-    const admin = role === 'ADMIN';
-    const jobs = [api(`/resources${admin ? '?all=true' : ''}`), admin ? api('/admin/orders') : api('/orders/mine')];
-    if (admin) jobs.push(api('/admin/orders?view=archive'), api('/admin/reports'), api('/admin/users'), api('/admin/activity'), api('/admin/finance/spending'), api('/admin/finance/cash'), api('/admin/member-stats'), api('/admin/stock-movements?limit=200'), api('/admin/integrations/discord'));
-    else jobs.push(api('/favorites'));
-    const results = await Promise.all(jobs);
-    setResources(results[0].resources);
-    setOrders(results[1].orders);
-    if (admin) { setArchivedOrders(results[2].orders); setReports(results[3]); setUsers(results[4].users); setLogs(results[5].logs); setFinance(results[6]); setCash(results[7]); setMemberStats(results[8]); setStockMovements(results[9].movements || []); setDiscordStatus(results[10]); }
-    else setFavoriteIds((results[2].favorites || []).map((item) => item.resourceId));
+    setPageLoading(true);
+    try {
+      if (role === 'ADMIN') {
+        switch (targetPage) {
+          case 'dashboard': {
+            const data = await api('/admin/dashboard');
+            setDashboardData(data);
+            setOrders(data.recentOrders || []);
+            break;
+          }
+          case 'inventory': {
+            const data = await api('/resources?all=true');
+            setResources(data.resources || []);
+            break;
+          }
+          case 'admin-orders': {
+            const data = await api('/admin/orders');
+            setOrders(data.orders || []);
+            break;
+          }
+          case 'archived-orders': {
+            const data = await api('/admin/orders?view=archive');
+            setArchivedOrders(data.orders || []);
+            break;
+          }
+          case 'reports':
+            setReports(await api('/admin/reports'));
+            break;
+          case 'users': {
+            const data = await api('/admin/users');
+            setUsers(data.users || []);
+            break;
+          }
+          case 'activity': {
+            const [activity, discord] = await Promise.all([api('/admin/activity'), api('/admin/integrations/discord')]);
+            setLogs(activity.logs || []);
+            setDiscordStatus(discord);
+            break;
+          }
+          case 'finance': {
+            const [spending, cashData] = await Promise.all([api('/admin/finance/spending'), api('/admin/finance/cash')]);
+            setFinance(spending);
+            setCash(cashData);
+            break;
+          }
+          case 'member-stats':
+            setMemberStats(await api('/admin/member-stats'));
+            break;
+          case 'stock-history': {
+            const data = await api('/admin/stock-movements?limit=200');
+            setStockMovements(data.movements || []);
+            break;
+          }
+          default:
+            break;
+        }
+      } else {
+        switch (targetPage) {
+          case 'dashboard': {
+            const [resourceData, orderData] = await Promise.all([api('/resources'), api('/orders/mine')]);
+            setResources(resourceData.resources || []);
+            setOrders(orderData.orders || []);
+            break;
+          }
+          case 'catalog':
+          case 'favorites': {
+            const [resourceData, favoriteData] = await Promise.all([api('/resources'), api('/favorites')]);
+            setResources(resourceData.resources || []);
+            setFavoriteIds((favoriteData.favorites || []).map((item) => item.resourceId));
+            break;
+          }
+          case 'my-orders': {
+            const data = await api('/orders/mine');
+            setOrders(data.orders || []);
+            break;
+          }
+          default:
+            break;
+        }
+      }
+    } finally {
+      setPageLoading(false);
+    }
   }, [user?.role]);
+
+  const refresh = useCallback(async (role = user?.role) => {
+    await loadPageData(page, role);
+  }, [loadPageData, page, user?.role]);
 
   const refreshNotifications = useCallback(async () => {
     if (!user?.id) return;
@@ -655,13 +749,13 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    refresh(user.role).catch((error) => setNotice({ type: 'error', message: error.message }));
-  }, [user, refresh]);
+    loadPageData(page, user.role).catch((error) => setNotice({ type: 'error', message: error.message }));
+  }, [user?.id, user?.role, page, loadPageData]);
 
   useEffect(() => {
     if (!user) return undefined;
     refreshNotifications().catch(() => {});
-    const timer = window.setInterval(() => refreshNotifications().catch(() => {}), 30000);
+    const timer = window.setInterval(() => refreshNotifications().catch(() => {}), 60000);
     return () => window.clearInterval(timer);
   }, [user, refreshNotifications]);
 
@@ -678,7 +772,7 @@ export default function App() {
     setBusy(true);
     try {
       const result = await api('/admin/users', { method: 'POST', body: JSON.stringify(data) });
-      await refresh(); await refreshNotifications();
+      await Promise.all([refresh(), refreshNotifications()]);
       setNoticeSafe({ type: 'success', message: result.message });
       return true;
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); return false; }
@@ -713,7 +807,7 @@ export default function App() {
     setBusy(true);
     try {
       const result = await api(`/admin/users/${userRecord.id}/approval`, { method: 'PATCH', body: JSON.stringify({ status }) });
-      await refresh(); await refreshNotifications();
+      await Promise.all([refresh(), refreshNotifications()]);
       setNoticeSafe({ type: 'success', message: result.message });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
@@ -796,7 +890,7 @@ export default function App() {
     setBusy(true);
     try {
       const result = await api(`/orders/${order.id}/reorder`, { method: 'POST', body: JSON.stringify({}) });
-      await refresh(); await refreshNotifications(); setPage('my-orders');
+      await Promise.all([refresh(), refreshNotifications()]); setPage('my-orders');
       setNoticeSafe({ type: 'success', message: result.message });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
@@ -808,7 +902,7 @@ export default function App() {
     setBusy(true);
     try {
       const result = await api('/orders', { method: 'POST', body: JSON.stringify({ items, notes }) });
-      setCart({}); await refresh(); await refreshNotifications(); setPage('my-orders');
+      setCart({}); await Promise.all([refresh(), refreshNotifications()]); setPage('my-orders');
       setNoticeSafe({ type: 'success', message: `${result.order.orderNumber} berhasil dikirim. Menunggu persetujuan admin.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
@@ -830,7 +924,7 @@ export default function App() {
     setBusy(true);
     try {
       await api(endpoint, { method: 'POST', body: JSON.stringify({ adminNotes, handoverNote }) });
-      await refresh(); await refreshNotifications(); setSelectedOrder(null); setNoticeSafe({ type: 'success', message: `Pesanan ${order.orderNumber} berhasil diperbarui.` });
+      await Promise.all([refresh(), refreshNotifications()]); setSelectedOrder(null); setNoticeSafe({ type: 'success', message: `Pesanan ${order.orderNumber} berhasil diperbarui.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -968,7 +1062,8 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
     <main className="main-area">
       <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button><div className="breadcrumb"><span>30sFams</span><span>/</span><strong>{pageTitle}</strong></div></div><div className="topbar-right"><div className="system-status"><span className="live-dot" /> System operational</div><NotificationCenter notifications={notifications} unreadCount={unreadCount} onReadAll={markAllNotificationsRead} onSelect={selectNotification} /><div className="topbar-divider" /><div className="topbar-profile"><div className="user-avatar small">{user.username.slice(0, 1).toUpperCase()}</div><div><strong>{user.username}</strong><span>{isAdmin ? 'Admin' : 'User'}</span></div></div></div></header>
       <div className="content-area"><Notice notice={notice} clear={() => setNotice(null)} />
-        {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} goTo={setPage} />}
+        {pageLoading ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
+        {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && !isAdmin && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />}
         {page === 'my-orders' && !isAdmin && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Buka detail untuk melihat item, catatan, invoice, dan riwayat status pesanan." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={orderAction} onDetail={setSelectedOrder} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={resources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
@@ -982,6 +1077,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
         {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
         {((isAdmin && ['catalog','my-orders','favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
+        </>}
       </div>
       <OrderDetailModal order={selectedOrder} isAdmin={isAdmin} onClose={() => setSelectedOrder(null)} onPrint={printSelectedOrder} />
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} onSubmit={changePassword} busy={busy} />}
