@@ -9,7 +9,7 @@ const globalForPrisma = globalThis;
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
   max: process.env.VERCEL === '1' ? 2 : 10,
-  idleTimeoutMillis: process.env.VERCEL === '1' ? 5000 : 10000,
+  idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 10000,
 });
 
