@@ -239,13 +239,32 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
   </>;
 }
 
+function DataPagination({ page, pageSize = 25, total, onPageChange }) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (totalPages <= 1) return null;
+  const firstItem = (page - 1) * pageSize + 1;
+  const lastItem = Math.min(total, page * pageSize);
+  return <div className="table-pagination">
+    <span>Menampilkan {number(firstItem)}–{number(lastItem)} dari {number(total)}</span>
+    <div>
+      <button type="button" className="button button-small button-ghost" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Sebelumnya</button>
+      <span>Halaman {number(page)} / {number(totalPages)}</span>
+      <button type="button" className="button button-small button-ghost" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Berikutnya</button>
+    </div>
+  </div>;
+}
+
 function OrderTable({ orders, isAdmin, onAction, onDetail, onRestore, onReorder, busy, readOnly = false, isArchived = false }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  const pageOrders = orders.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [orders]);
   if (!orders.length) return <EmptyState icon={ClipboardList} title="Belum ada data pesanan" detail="Data pesanan akan tampil di halaman ini setelah ada transaksi." />;
-  return <div className="table-wrap"><table><thead><tr>{isAdmin && <th>Pemesan</th>}<th>Nomor pesanan</th><th>Tanggal</th>{isArchived && <th>Diarsipkan</th>}<th>Resource</th><th>Jumlah</th><th>Total nominal</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}>
+  return <div className="table-wrap"><table><thead><tr>{isAdmin && <th>Pemesan</th>}<th>Nomor pesanan</th><th>Tanggal</th>{isArchived && <th>Diarsipkan</th>}<th>Resource</th><th>Jumlah</th><th>Total nominal</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
     {isAdmin && <td><div className="user-cell"><div className="avatar-mini">{(order.user?.username || 'U').slice(0, 1).toUpperCase()}</div>{order.user?.username || '-'}</div></td>}
     <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Catatan: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{order.items.map((item) => <span key={item.id}>{item.resourceName}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
     <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetail(order)}><FileText size={13} /> Detail</button>{isArchived && isAdmin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Pulihkan</button>}{!readOnly && isAdmin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Setujui"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Tolak"><X size={15} /></button></>}{!readOnly && isAdmin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Konfirmasi penyerahan langsung dan selesaikan"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Batalkan dan lepas stok"><X size={15} /></button></>}{!readOnly && !isAdmin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Batalkan</button>}{!readOnly && !isAdmin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Pesan ulang</button>}</div></td>
-  </tr>)}</tbody></table></div>;
+  </tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={orders.length} onPageChange={setPage} />;
 }
 
 function OrderDetailModal({ order, onClose, onPrint, isAdmin }) {
@@ -332,6 +351,10 @@ function Reports({ reports }) {
 function UsersPage({ users, onCreate, onToggle, onApprove, busy }) {
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState({ username: '', email: '', password: '' });
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  const visibleUsers = users.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [users]);
   async function submit(event) {
     event.preventDefault();
     const created = await onCreate(draft);
@@ -361,11 +384,11 @@ function UsersPage({ users, onCreate, onToggle, onApprove, busy }) {
       <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}><UserPlus size={15}/> Buat akun</button></div>
     </form>}
     <div className="panel"><div className="panel-heading"><div><h3>Daftar anggota</h3><p>{number(users.filter((user) => user.role === 'USER').length)} akun user · {number(pendingCount)} menunggu persetujuan</p></div></div>
-      {users.length ? <div className="table-wrap"><table><thead><tr><th>Pengguna</th><th>Email</th><th>Status</th><th>Bergabung</th><th>Total pesanan</th><th>Aksi</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
+      {users.length ? <div className="table-wrap"><table><thead><tr><th>Pengguna</th><th>Email</th><th>Status</th><th>Bergabung</th><th>Total pesanan</th><th>Aksi</th></tr></thead><tbody>{visibleUsers.map((user) => <tr key={user.id}>
         <td><div className="user-cell"><div className="avatar-mini">{user.username.slice(0, 1).toUpperCase()}</div><strong>{user.username}</strong><small className="cell-sub">{user.role}</small></div></td><td>{user.email}</td>
         <td><span className={`stock-tag ${statusClass(user)}`}>{statusText(user)}</span></td><td>{dateTime(user.createdAt)}</td><td>{number(user._count.orders)}</td>
         <td>{user.role !== 'USER' ? <span className="muted">Protected</span> : user.registrationStatus === 'PENDING' ? <div className="table-actions"><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Setujui</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Tolak</button></div> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><UserPlus size={13}/> Setujui ulang</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><UserX size={13}/> Nonaktifkan</> : <><UserPlus size={13}/> Aktifkan</>}</button>}</td>
-      </tr>)}</tbody></table></div> : <EmptyState icon={Users} title="Belum ada user" detail="Anggota dapat mendaftarkan akun melalui halaman login." />}
+      </tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={users.length} onPageChange={setPage} /> : <EmptyState icon={Users} title="Belum ada user" detail="Anggota dapat mendaftarkan akun melalui halaman login." />}
     </div>
   </>;
 }
@@ -391,6 +414,8 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
   const [incomeDraft, setIncomeDraft] = useState({ amount: '', category: 'Pemasukan manual', description: '' });
   const [adjustmentDraft, setAdjustmentDraft] = useState({ direction: 'OUT', amount: '', description: '' });
   const [ledgerFilter, setLedgerFilter] = useState('ALL');
+  const [cashPage, setCashPage] = useState(1);
+  const cashPageSize = 25;
   useEffect(() => {
     if (currentPeriod) setPeriodDraft({
       name: currentPeriod.name,
@@ -437,6 +462,10 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
   const periods = finance.periods || [];
   const cashEntries = cash.entries || [];
   const visibleCashEntries = cashEntries.filter((entry) => ledgerFilter === 'ALL' || (ledgerFilter === 'IN' ? ['OPENING_BALANCE','ORDER_INCOME','ADJUSTMENT_IN'].includes(entry.type) : ['EXPENSE','ADJUSTMENT_OUT'].includes(entry.type)));
+  const cashPageCount = Math.max(1, Math.ceil(visibleCashEntries.length / cashPageSize));
+  const safeCashPage = Math.min(cashPage, cashPageCount);
+  const visibleCashRows = visibleCashEntries.slice((safeCashPage - 1) * cashPageSize, safeCashPage * cashPageSize);
+  useEffect(() => setCashPage(1), [ledgerFilter]);
 
   return <>
     <SectionHeader eyebrow="FINANCE & GANG FUND" title="Keuangan & kas gang" description="Halaman ini khusus admin. Pembelanjaan dihitung dari pesanan Completed; saldo kas dihitung dari buku kas masuk dan keluar." action={<div className="date-chip"><ShieldCheck size={15}/> Admin only</div>} />
@@ -504,10 +533,11 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
           </form>
         </div>}
         <div className="panel-subheading cash-history-heading"><div><h4>Riwayat pemasukan dan pengeluaran</h4><small>Pemasukan pembelian otomatis saat order ditandai Completed.</small></div><div className="header-actions"><div className="filter-select compact"><select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value)}><option value="ALL">Semua</option><option value="IN">Pemasukan</option><option value="OUT">Pengeluaran</option></select><ChevronDown size={14}/></div><button type="button" className="button button-outline button-small" onClick={() => exportCashEntries(visibleCashEntries)} disabled={!visibleCashEntries.length}><ArrowDownToLine size={14}/> Export CSV</button></div></div>
-        {visibleCashEntries.length ? <div className="cash-ledger-list">{visibleCashEntries.slice(0, 300).map((entry) => {
+        {visibleCashEntries.length ? <div className="cash-ledger-list">{visibleCashRows.map((entry) => {
           const positive = ['OPENING_BALANCE', 'ORDER_INCOME', 'ADJUSTMENT_IN'].includes(entry.type);
           return <div className="cash-ledger-row" key={entry.id}><div className={`cash-ledger-icon ${positive ? 'income' : 'expense'}`}>{positive ? <ArrowUpRight size={16}/> : <ArrowDownToLine size={16}/>}</div><div className="cash-ledger-main"><strong>{cashEntryLabel(entry)}</strong><span>{entry.description}</span><small>{entry.category}{entry.order?.orderNumber ? ` · ${entry.order.orderNumber} · ${entry.order.user?.username || ''}` : ''}</small><small>{dateTime(entry.createdAt)} · {entry.createdBy?.username || 'System'}</small></div><strong className={positive ? 'cash-positive' : 'cash-negative'}>{positive ? '+' : '−'}{money(entry.amount)}</strong></div>;
         })}</div> : <EmptyState icon={Wallet} title="Tidak ada catatan" detail={ledgerFilter === 'ALL' ? 'Tetapkan saldo awal untuk mulai mencatat pemasukan dan pengeluaran gang.' : 'Tidak ada transaksi pada filter ini.'} />}
+        {visibleCashEntries.length > cashPageSize && <DataPagination page={safeCashPage} pageSize={cashPageSize} total={visibleCashEntries.length} onPageChange={setCashPage} />}
       </section>
     </div>
     <div className="finance-footnote"><ShieldCheck size={15}/><span>{cash.note} Total pembelanjaan sepanjang masa dihitung dari semua pesanan selesai dan tidak pernah dihapus saat periode di-reset.</span></div>
@@ -547,7 +577,11 @@ function downloadCsv(filename, headers, rows) {
 
 function StockMovementPage({ movements }) {
   const [type, setType] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
   const filtered = movements.filter((movement) => type === 'ALL' || movement.type === type);
+  const visibleMovements = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [type, movements]);
   const labels = { RESTOCK: 'Stok masuk', ADJUSTMENT: 'Koreksi stok', RESERVED: 'Dicadangkan', RELEASED: 'Reservasi dikembalikan', COMPLETED: 'Diserahkan' };
   function exportMovements() {
     const rows = filtered.map((m) => [dateTime(m.createdAt), m.resource?.name, m.resource?.sku, labels[m.type] || m.type, m.quantity, m.resource?.unit, m.order?.orderNumber, m.user?.username || 'System', m.note]);
@@ -556,15 +590,19 @@ function StockMovementPage({ movements }) {
   return <>
     <SectionHeader eyebrow="INVENTORY AUDIT TRAIL" title="Riwayat keluar masuk stok" description="Semua restock, koreksi, reservasi, pengembalian reservasi, dan penyerahan resource tercatat di sini." action={<div className="header-actions"><div className="filter-select compact"><SlidersHorizontal size={15}/><select value={type} onChange={(event) => setType(event.target.value)}><option value="ALL">Semua aktivitas</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><ChevronDown size={14}/></div><button className="button button-outline button-small" onClick={exportMovements} disabled={!filtered.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
     <div className="panel"><div className="panel-heading"><div><h3>Ledger stok</h3><p>{number(filtered.length)} catatan terbaru · maksimum 200 catatan</p></div><History size={19}/></div>
-      {filtered.length ? <div className="table-wrap"><table><thead><tr><th>Waktu</th><th>Resource</th><th>Aktivitas</th><th>Jumlah</th><th>Nomor pesanan</th><th>Pelaksana</th><th>Catatan</th></tr></thead><tbody>{filtered.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div> : <EmptyState icon={History} title="Belum ada catatan stok" detail="Aktivitas inventory akan tercatat saat stok dibuat, disesuaikan, dicadangkan, dikembalikan, atau diserahkan."/>}
+      {filtered.length ? <div className="table-wrap"><table><thead><tr><th>Waktu</th><th>Resource</th><th>Aktivitas</th><th>Jumlah</th><th>Nomor pesanan</th><th>Pelaksana</th><th>Catatan</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /> : <EmptyState icon={History} title="Belum ada catatan stok" detail="Aktivitas inventory akan tercatat saat stok dibuat, disesuaikan, dicadangkan, dikembalikan, atau diserahkan."/>}
     </div>
   </>;
 }
 
 function MemberStatsPage({ data }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  useEffect(() => setPage(1), [data?.members]);
   if (!data) return <div className="panel loading-panel">Memuat statistik anggota...</div>;
   const summary = data.summary || {};
   const members = data.members || [];
+  const visibleMembers = members.slice((page - 1) * pageSize, page * pageSize);
   function exportMembers() {
     const rows = members.map((m) => [m.username, m.email, m.isActive ? 'Aktif' : 'Nonaktif', m.registrationStatus, m.completedOrders, m.completedQuantity, m.totalSpend, m.pendingOrders, m.approvedOrders, m.lastCompletedAt ? dateTime(m.lastCompletedAt) : '']);
     downloadCsv(`30sFams-member-statistics-${new Date().toISOString().slice(0,10)}.csv`, ['Username', 'Email', 'Status Akun', 'Status Pendaftaran', 'Pesanan Selesai', 'Total Kuantitas', 'Total Pembelanjaan USD', 'Pending', 'Approved', 'Pembelian Terakhir'], rows);
@@ -573,7 +611,7 @@ function MemberStatsPage({ data }) {
     <SectionHeader eyebrow="MEMBER INSIGHTS" title="Statistik anggota" description="Pantau aktivitas pemesanan setiap anggota berdasarkan pesanan yang sudah Completed." action={<div className="header-actions"><div className="date-chip"><ShieldCheck size={15}/> Admin only</div><button className="button button-outline button-small" onClick={exportMembers} disabled={!members.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
     <div className="stats-grid"><StatCard label="Total anggota" value={number(summary.totalMembers)} detail={`${number(summary.activeMembers)} akun aktif`} icon={Users} tone="blue"/><StatCard label="Menunggu aktivasi" value={number(summary.pendingRegistrations)} detail="Pendaftaran baru" icon={Clock3} tone="orange"/><StatCard label="Pesanan selesai" value={number(summary.completedOrders)} detail={`${number(summary.completedQuantity)} unit`} icon={Package} tone="green"/><StatCard label="Total pembelanjaan" value={money(summary.completedAmount)} detail="Akumulasi seluruh anggota" icon={CircleDollarSign} tone="purple"/></div>
     <div className="panel"><div className="panel-heading"><div><h3>Aktivitas pembelian anggota</h3><p>Diurutkan berdasarkan total pembelanjaan selesai tertinggi.</p></div><Users size={19}/></div>
-      {members.length ? <div className="table-wrap"><table><thead><tr><th>Anggota</th><th>Status akun</th><th>Pesanan selesai</th><th>Total kuantitas</th><th>Total pembelanjaan</th><th>Order aktif</th><th>Pembelian terakhir</th></tr></thead><tbody>{members.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.registrationStatus === 'PENDING' ? 'Menunggu' : member.registrationStatus === 'REJECTED' ? 'Ditolak' : member.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'Belum ada'}</td></tr>)}</tbody></table></div> : <EmptyState icon={Users} title="Belum ada anggota" detail="Anggota yang mendaftar akan muncul di sini."/>}
+      {members.length ? <div className="table-wrap"><table><thead><tr><th>Anggota</th><th>Status akun</th><th>Pesanan selesai</th><th>Total kuantitas</th><th>Total pembelanjaan</th><th>Order aktif</th><th>Pembelian terakhir</th></tr></thead><tbody>{visibleMembers.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.registrationStatus === 'PENDING' ? 'Menunggu' : member.registrationStatus === 'REJECTED' ? 'Ditolak' : member.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'Belum ada'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={members.length} onPageChange={setPage} /> : <EmptyState icon={Users} title="Belum ada anggota" detail="Anggota yang mendaftar akan muncul di sini."/>}
     </div>
   </>;
 }
