@@ -9,6 +9,7 @@ import {
 import { api, assetUrl, categoryLabel, dateTime, money, number, statusLabel, uploadFile } from './api';
 
 const CATEGORIES = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT'];
+const AUTO_SYNC_INTERVAL_MS = 15000;
 
 function BrandLogo({ className = '' }) {
   return <img className={`brand-logo ${className}`.trim()} src="/30s-logo.png" alt="Logo 30sFams" />;
@@ -837,12 +838,33 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return undefined;
+    let syncing = false;
+    const syncActivePage = async () => {
+      if (document.visibilityState !== 'visible' || syncing) return;
+      syncing = true;
+      try {
+        // Refresh only the page currently open, plus the notification center.
+        // loadPageData deduplicates concurrent requests and keeps loaded content visible.
+        await Promise.all([
+          loadPageData(page, user.role, true),
+          refreshNotifications(),
+        ]);
+      } catch {
+        // A temporary polling failure should not interrupt the current screen.
+      } finally {
+        syncing = false;
+      }
+    };
     refreshNotifications().catch(() => {});
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') refreshNotifications().catch(() => {});
-    }, 120000);
-    return () => window.clearInterval(timer);
-  }, [user, refreshNotifications]);
+    const timer = window.setInterval(syncActivePage, AUTO_SYNC_INTERVAL_MS);
+    window.addEventListener('focus', syncActivePage);
+    document.addEventListener('visibilitychange', syncActivePage);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', syncActivePage);
+      document.removeEventListener('visibilitychange', syncActivePage);
+    };
+  }, [user?.id, user?.role, page, loadPageData, refreshNotifications]);
 
   const navItems = isAdmin ? adminNav : userNav;
   const pageTitle = useMemo(() => navItems.find((item) => item.key === page)?.label || 'Dashboard', [navItems, page]);
