@@ -285,10 +285,10 @@ router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
 router.post('/orders/:id/reject', asyncHandler(async (req, res) => {
   const data = z.object({ adminNotes: z.string().trim().max(500).optional().default('') }).parse(req.body ?? {});
   const updated = await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({ where: { id: req.params.id } });
+    const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
     if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
     if (order.status !== 'PENDING') throw new HttpError(409, 'Hanya pesanan Pending yang dapat ditolak.');
-    await releaseOrderReservation(tx, { ...order, items: await tx.orderItem.findMany({ where: { orderId: order.id } }) }, req.user.id, 'Cadangan dikembalikan karena pesanan ' + order.orderNumber + ' ditolak admin.');
+    await releaseOrderReservation(tx, order, req.user.id, 'Cadangan dikembalikan karena pesanan ' + order.orderNumber + ' ditolak admin.');
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_REJECTED', detail: `Menolak pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'REJECTED',
