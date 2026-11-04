@@ -12,7 +12,7 @@ export const requireAuth = asyncHandler(async (req, _res, next) => {
     throw new HttpError(401, 'Sesi login tidak valid atau sudah berakhir.');
   }
   const user = await prisma.user.findUnique({
-    where: { id: payload.sub, isActive: true, registrationStatus: 'APPROVED' },
+    where: { id: payload.sub, isActive: true, registrationStatus: 'APPROVED', deletedAt: null },
     select: { id: true, username: true, email: true, role: true, sessionVersion: true },
   });
   if (!user) throw new HttpError(401, 'Akun tidak ditemukan atau telah dinonaktifkan. Silakan hubungi admin 30sFams.');
