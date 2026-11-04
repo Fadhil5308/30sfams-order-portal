@@ -179,18 +179,19 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
     const summary = dashboardData?.summary || reports?.summary || {};
     const stock = dashboardData?.stock || {};
     const byCategory = stock.byCategory || {};
-    const totalAvailable = Number(stock.available ?? resources.reduce((sum, item) => sum + item.stockAvailable, 0));
-    const totalReserved = Number(stock.reserved ?? resources.reduce((sum, item) => sum + item.stockReserved, 0));
+    const catalogResources = resources.filter((item) => item.category !== 'OTHER');
+    const totalAvailable = Number(stock.available ?? catalogResources.reduce((sum, item) => sum + item.stockAvailable, 0));
+    const totalReserved = Number(stock.reserved ?? catalogResources.reduce((sum, item) => sum + item.stockReserved, 0));
     const recentOrders = dashboardData?.recentOrders || orders;
     const categoryValues = CATEGORIES.map((category) => Number(
-      byCategory[category] ?? resources.filter((item) => item.category === category).reduce((sum, item) => sum + item.stockAvailable, 0)
+      byCategory[category] ?? catalogResources.filter((item) => item.category === category).reduce((sum, item) => sum + item.stockAvailable, 0)
     ));
     const maxCategoryStock = Math.max(1, ...categoryValues);
 
     return <>
       <SectionHeader eyebrow="ADMIN OVERVIEW" title={`Selamat datang, ${user.username}`} description="Pantau inventory, permintaan, dan aktivitas resource server." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}</div>} />
       <div className="stats-grid">
-        <StatCard label="Total jenis resource" value={number(summary.activeResources ?? resources.length)} detail="Resource aktif" icon={Boxes} tone="blue" />
+        <StatCard label="Total jenis resource" value={number(summary.activeResources ?? catalogResources.length)} detail="Resource aktif" icon={Boxes} tone="blue" />
         <StatCard label="Stok tersedia" value={number(totalAvailable)} detail={`${number(totalReserved)} unit sedang dicadangkan`} icon={Package} tone="green" />
         <StatCard label="Pesanan menunggu" value={number(summary.pendingOrders ?? pending)} detail="Perlu ditinjau admin" icon={ClipboardList} tone="orange" />
         <StatCard label="Total nilai selesai" value={money(summary.completedAmount ?? completedAmount)} detail={`${number(summary.completedQuantity ?? completedQty)} unit terjual`} icon={CircleDollarSign} tone="purple" />
@@ -1040,6 +1041,32 @@ export default function App() {
       setPageLoadError({ key: pageKey, message: error.message || 'Data halaman gagal dimuat.' });
       setNotice({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
     });
+  }, [user?.id, user?.role, page, loadPageData]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    let cancelled = false;
+    const commonPages = user.role === 'ADMIN'
+      ? ['catalog', 'inventory', 'stash', 'my-orders', 'admin-orders']
+      : ['catalog', 'favorites', 'my-orders'];
+
+    const prefetchCommonPages = async () => {
+      for (const targetPage of commonPages) {
+        if (cancelled) return;
+        if (targetPage === page) continue;
+        try {
+          await loadPageData(targetPage, user.role, false);
+        } catch {
+          // Prefetch is best-effort; the requested page reports its own loading error.
+        }
+      }
+    };
+
+    const timer = window.setTimeout(prefetchCommonPages, 900);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [user?.id, user?.role, page, loadPageData]);
 
   useEffect(() => {
