@@ -88,6 +88,9 @@ router.post('/', asyncHandler(async (req, res) => {
     const ids = data.items.map((item) => item.resourceId);
     const resources = await tx.resource.findMany({ where: { id: { in: ids }, isActive: true } });
     if (resources.length !== ids.length) throw new HttpError(400, 'Ada resource yang tidak ditemukan atau sedang tidak aktif.');
+    if (resources.some((resource) => resource.category === 'OTHER')) {
+      throw new HttpError(400, 'Item kategori Other hanya tersedia di Stash dan tidak dapat dipesan.');
+    }
     const byId = new Map(resources.map((resource) => [resource.id, resource]));
     let totalAmount = new Prisma.Decimal(0);
     let totalQuantity = 0;
@@ -165,6 +168,9 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     const ids = previous.items.map((item) => item.resourceId);
     const resources = await tx.resource.findMany({ where: { id: { in: ids }, isActive: true } });
     if (resources.length !== ids.length) throw new HttpError(409, 'Sebagian resource pada pesanan lama sudah tidak aktif. Hubungi admin.');
+    if (resources.some((resource) => resource.category === 'OTHER')) {
+      throw new HttpError(409, 'Item kategori Other hanya tersedia di Stash dan tidak dapat dipesan ulang.');
+    }
     const byId = new Map(resources.map((resource) => [resource.id, resource]));
     let totalAmount = new Prisma.Decimal(0);
     let totalQuantity = 0;
