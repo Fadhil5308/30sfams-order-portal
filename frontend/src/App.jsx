@@ -212,7 +212,7 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
     </div>
   </>;
 }
-function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false, showFavorites = true }) {
+function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false, showFavorites = true, isAdminMode = false }) {
   const [orderNotes, setOrderNotes] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 18;
@@ -235,7 +235,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
     });
   }
   return <>
-    <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Resource favorit' : 'Pilih resource'} description={favoriteOnly ? 'Daftar resource favorit yang kamu simpan untuk pemesanan berikutnya.' : 'Temukan item yang dibutuhkan, tentukan jumlah, lalu kirim pesanan untuk ditinjau admin.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
+    <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Resource favorit' : 'Pilih resource'} description={favoriteOnly ? 'Daftar resource favorit yang kamu simpan untuk pemesanan berikutnya.' : isAdminMode ? 'Pilih resource untuk kebutuhan akun Super Admin. Pesanan tercatat atas nama akun ini dan tetap masuk ke daftar Semua Pesanan.' : 'Temukan item yang dibutuhkan, tentukan jumlah, lalu kirim pesanan untuk ditinjau admin.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
     <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama resource atau SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
     {filtered.length ? <><div className="resource-grid">{visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
@@ -1130,7 +1130,7 @@ export default function App() {
     try {
       const result = await api('/orders', { method: 'POST', body: JSON.stringify({ items, notes }) });
       setCart({}); await Promise.all([refresh(), refreshNotifications()]); setPage('my-orders');
-      setNoticeSafe({ type: 'success', message: `${result.order.orderNumber} berhasil dikirim. Menunggu persetujuan admin.` });
+      setNoticeSafe({ type: 'success', message: isAdmin ? `${result.order.orderNumber} dibuat atas nama akun Super Admin. Buka Semua Pesanan untuk meninjau dan memprosesnya.` : `${result.order.orderNumber} berhasil dikirim. Menunggu persetujuan admin.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1292,7 +1292,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
-        {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} />}
+        {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
         {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={resources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
