@@ -368,13 +368,12 @@ function Reports({ reports }) {
 
 function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, busy }) {
   const [showCreate, setShowCreate] = useState(false);
-  const [draft, setDraft] = useState({ username: '', email: '', password: '' });
+  const [draft, setDraft] = useState({ username: '', email: '', password: '', rank: 'HANGAROUND' });
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const pageSize = 25;
-  const members = users.filter((user) => user.role === 'USER');
   const filteredUsers = users.filter((user) => {
     const term = search.trim().toLowerCase();
     const matchesSearch = !term || user.username.toLowerCase().includes(term) || user.email.toLowerCase().includes(term);
@@ -386,7 +385,7 @@ function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, busy })
   async function submit(event) {
     event.preventDefault();
     const created = await onCreate(draft);
-    if (created) { setDraft({ username: '', email: '', password: '' }); setShowCreate(false); }
+    if (created) { setDraft({ username: '', email: '', password: '', rank: 'HANGAROUND' }); setShowCreate(false); }
   }
   function statusText(user) {
     if (user.registrationStatus === 'PENDING') return 'Pending';
@@ -407,6 +406,7 @@ function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, busy })
         <label>Username<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="username" /></label>
         <label>Email<input required type="email" maxLength={150} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="email@domain.com" /></label>
         <label>Password awal<input required type="password" minLength={12} maxLength={100} value={draft.password} onChange={(event) => setDraft({ ...draft, password: event.target.value })} placeholder="Minimal 12 karakter" autoComplete="new-password" /></label>
+        <label>Rank awal<select value={draft.rank} onChange={(event) => setDraft({ ...draft, rank: event.target.value })}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select></label>
       </div>
       <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}><UserPlus size={15}/> Create member</button></div>
     </form>}
@@ -420,7 +420,7 @@ function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, busy })
         <div className="table-wrap members-table-wrap"><table className="members-table"><thead><tr><th>Member</th><th>Rank</th><th>Role</th><th>Status</th><th>Orders</th><th>Actions</th></tr></thead><tbody>
           {visibleUsers.map((user) => <tr key={user.id}>
             <td><div className="members-name"><span className="avatar-mini">{user.username.slice(0,1).toUpperCase()}</span><strong>{user.username}</strong></div></td>
-            <td>{user.role === 'USER' ? <select className="rank-select" aria-label={`Rank ${user.username}`} value={user.rank || 'HANGAROUND'} disabled={busy} onChange={(event) => onRankChange(user, event.target.value)}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select> : <span className="muted">{rankLabel(user.rank)}</span>}</td>
+            <td><select className="rank-select" aria-label={`Rank ${user.username}`} value={user.rank || 'HANGAROUND'} disabled={busy} onChange={(event) => onRankChange(user, event.target.value)}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select></td>
             <td><span className={`member-role-pill ${user.role === 'ADMIN' ? 'admin' : 'member'}`}>{user.role === 'ADMIN' ? 'Super Admin' : 'Member'}</span></td>
             <td><span className={`stock-tag ${statusClass(user)}`}>{statusText(user)}</span></td>
             <td className="strong-cell">{number(user._count?.orders || 0)}</td>
