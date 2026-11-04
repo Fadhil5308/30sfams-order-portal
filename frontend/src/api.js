@@ -93,6 +93,7 @@ export const categoryLabel = (value) =>
     VEST: 'Vest',
     ATTACHMENT: 'Attachment',
     AMMO: 'Ammo',
+    OTHER: 'Other',
   }[value] || value);
 
 export const statusLabel = (value) =>
