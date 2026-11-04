@@ -82,6 +82,7 @@ model User {
   rank         UserRank      @default(HANGAROUND)
   isActive     Boolean       @default(true)
   registrationStatus RegistrationStatus @default(APPROVED)
+  deletedAt    DateTime?
   sessionVersion Int @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -97,6 +98,7 @@ model User {
 
   @@index([role])
   @@index([registrationStatus, isActive])
+  @@index([deletedAt])
 }
 
 model Resource {
