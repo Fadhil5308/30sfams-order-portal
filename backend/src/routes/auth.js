@@ -70,7 +70,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   const data = loginSchema.parse(req.body);
   const identifier = data.identifier.trim();
   const user = await prisma.user.findFirst({
-    where: { OR: [{ email: identifier.toLowerCase() }, { username: identifier }] },
+    where: { deletedAt: null, OR: [{ email: identifier.toLowerCase() }, { username: identifier }] },
   });
   if (!user || !(await bcrypt.compare(data.password, user.passwordHash))) throw new HttpError(401, 'Username/email atau password salah.');
   if (user.registrationStatus === 'PENDING') throw new HttpError(403, 'Pendaftaran kamu masih menunggu persetujuan admin 30sFams.');
