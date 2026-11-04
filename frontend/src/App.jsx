@@ -366,7 +366,7 @@ function Reports({ reports }) {
   </>;
 }
 
-function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, onRoleChange, currentUserId, busy }) {
+function UsersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChange, onRoleChange, currentUserId, busy }) {
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState({ username: '', email: '', password: '', rank: 'HANGAROUND' });
   const [page, setPage] = useState(1);
@@ -424,7 +424,7 @@ function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, onRoleC
             <td><span className={`member-role-pill ${user.role === 'ADMIN' ? 'admin' : 'member'}`}>{user.role === 'ADMIN' ? 'Super Admin' : 'Member'}</span></td>
             <td><span className={`stock-tag ${statusClass(user)}`}>{statusText(user)}</span></td>
             <td className="strong-cell">{number(user._count?.orders || 0)}</td>
-            <td><div className="table-actions"><select className="rank-select" aria-label={`Role ${user.username}`} value={user.role} disabled={busy || user.id === currentUserId} onChange={(event) => onRoleChange(user, event.target.value)}><option value="USER">Member</option><option value="ADMIN">Super Admin</option></select>{user.role === 'USER' ? user.registrationStatus === 'PENDING' ? <><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Approve</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Reject</button></> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><UserPlus size={13}/> Approve again</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><UserX size={13}/> Deactivate</> : <><UserPlus size={13}/> Activate</>}</button> : <span className="muted">{user.id === currentUserId ? 'Your account' : 'Full access'}</span>}</div></td>
+            <td><div className="table-actions"><select className="rank-select" aria-label={`Role ${user.username}`} value={user.role} disabled={busy || user.id === currentUserId} onChange={(event) => onRoleChange(user, event.target.value)}><option value="USER">Member</option><option value="ADMIN">Super Admin</option></select>{user.role === 'USER' ? <>{user.registrationStatus === 'PENDING' ? <><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Approve</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Reject</button></> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><UserPlus size={13}/> Approve again</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><UserX size={13}/> Deactivate</> : <><UserPlus size={13}/> Activate</>}</button>}<button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onDelete(user)}><Trash2 size={13}/> Hapus</button></> : <span className="muted">{user.id === currentUserId ? 'Your account' : 'Full access'}</span>}</div></td>
           </tr>)}
         </tbody></table></div>
         <div className="members-table-footer"><span>{number(filteredUsers.length ? (page - 1) * pageSize + 1 : 0)}–{number(Math.min(page * pageSize, filteredUsers.length))} of {number(filteredUsers.length)}</span><DataPagination page={page} pageSize={pageSize} total={filteredUsers.length} onPageChange={setPage} /></div>
@@ -971,6 +971,24 @@ export default function App() {
     }
   }
 
+  async function deleteUser(userRecord) {
+    const confirmed = window.confirm(
+      `Hapus akun Member "${userRecord.username}"? Akun akan langsung kehilangan akses dan dihapus dari daftar anggota. Riwayat pesanan, stok, dan transaksi tetap disimpan untuk audit. Tindakan ini tidak dapat dibatalkan dari aplikasi.`
+    );
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const result = await api(`/admin/users/${userRecord.id}`, { method: 'DELETE' });
+      await refresh();
+      setNoticeSafe({ type: 'success', message: result.message });
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggleUser(userRecord) {
     const nextActive = !userRecord.isActive;
     if (!window.confirm(`${nextActive ? 'Aktifkan' : 'Nonaktifkan'} akun ${userRecord.username}? ${nextActive ? 'User dapat login kembali.' : 'User akan langsung kehilangan akses saat request berikutnya.'}`)) return;
@@ -1256,7 +1274,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="Semua pesanan" description="Tinjau permintaan, setujui reservasi stok, dan tandai Completed langsung setelah resource diserahkan. Reservasi tidak kedaluwarsa otomatis; admin mengelolanya secara manual." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Batalkan order aktif</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Arsipkan semua</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} pesanan aktif</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetail={openOrderDetail} busy={busy} /></div></>}
         {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Arsip pesanan" description="Semua pesanan yang diarsipkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export arsip CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} arsip</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetail={openOrderDetail} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
         {page === 'reports' && isAdmin && <Reports reports={reports} />}
-        {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
+        {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onDelete={deleteUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
         {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
         {((isAdmin && ['catalog','my-orders','favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
