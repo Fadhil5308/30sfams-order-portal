@@ -89,7 +89,7 @@ async function removeStoredImage(imageUrl) {
   }
 }
 
-const categories = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT', 'AMMO'];
+const categories = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT', 'AMMO', 'OTHER'];
 const createSchema = z.object({
   name: z.string().trim().min(2).max(100),
   sku: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9_-]+$/),
@@ -110,16 +110,41 @@ const updateSchema = z.object({
 
 router.use(requireAuth);
 
+router.get('/stash', requireAdmin, asyncHandler(async (req, res) => {
+  // Stash is a view over the same Resource rows used by inventory and ordering.
+  // It intentionally includes both orderable resources and stash-only OTHER items.
+  const resources = await prisma.resource.findMany({
+    orderBy: [{ category: 'asc' }, { name: 'asc' }],
+  });
+  res.json({ resources: resources.map(serializeResource) });
+}));
+
 router.get('/', asyncHandler(async (req, res) => {
   const { category, search, all } = req.query;
+  const isAdminInventoryView = req.user.role === 'ADMIN' && all === 'true';
   const where = {};
-  if (category && categories.includes(String(category))) where.category = String(category);
+
+  // OTHER items are never exposed through the catalog-facing endpoint.
+  if (category && categories.includes(String(category))) {
+    const requestedCategory = String(category);
+    if (requestedCategory === 'OTHER' && !isAdminInventoryView) {
+      res.json({ resources: [] });
+      return;
+    }
+    where.category = requestedCategory;
+  } else if (!isAdminInventoryView) {
+    where.category = { not: 'OTHER' };
+  }
+
   if (search) where.OR = [
     { name: { contains: String(search), mode: 'insensitive' } },
     { sku: { contains: String(search), mode: 'insensitive' } },
   ];
-  if (!(req.user.role === 'ADMIN' && all === 'true')) where.isActive = true;
-  const resources = await prisma.resource.findMany({ where, orderBy: [{ category: 'asc' }, { name: 'asc' }] });
+  if (!isAdminInventoryView) where.isActive = true;
+  const resources = await prisma.resource.findMany({
+    where,
+    orderBy: [{ category: 'asc' }, { name: 'asc' }],
+  });
   res.json({ resources: resources.map(serializeResource) });
 }));
 
@@ -139,7 +164,7 @@ router.post('/', requireAdmin, asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'RESOURCE_CREATED', detail: `Menambahkan resource ${created.name} (${created.sku})` } });
     return created;
   });
-  void sendDiscordNotification({ title: 'Resource inventory baru', description: `Resource **${resource.name}** (${resource.sku}) ditambahkan ke katalog 30sFams.` });
+  void sendDiscordNotification({ title: resource.category === 'OTHER' ? 'Item Stash baru' : 'Resource inventory baru', description: resource.category === 'OTHER' ? `Item **${resource.name}** (${resource.sku}) ditambahkan ke Stash dan tidak tersedia di katalog pemesanan.` : `Resource **${resource.name}** (${resource.sku}) ditambahkan ke katalog 30sFams.` });
   res.status(201).json({ resource: serializeResource(resource) });
 }));
 
