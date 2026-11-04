@@ -444,7 +444,7 @@ router.post('/users', asyncHandler(async (req, res) => {
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: { username, email, passwordHash, role: 'USER', isActive: true, registrationStatus: 'APPROVED' },
-      select: { id: true, username: true, email: true, role: true, isActive: true, registrationStatus: true, createdAt: true },
+      select: { id: true, username: true, email: true, role: true, rank: true, isActive: true, registrationStatus: true, createdAt: true },
     });
     await tx.notification.create({ data: {
       userId: created.id, type: 'ACCOUNT_CREATED', title: 'Akun 30sFams dibuat',
@@ -489,10 +489,24 @@ router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
 
 router.get('/users', asyncHandler(async (_req, res) => {
   const users = await prisma.user.findMany({
-    select: { id: true, username: true, email: true, role: true, isActive: true, registrationStatus: true, createdAt: true, _count: { select: { orders: true } } },
+    select: { id: true, username: true, email: true, role: true, rank: true, isActive: true, registrationStatus: true, createdAt: true, _count: { select: { orders: true } } },
     orderBy: { createdAt: 'desc' }, take: 500,
   });
   res.json({ users });
+}));
+
+router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
+  const data = z.object({ rank: z.enum(['HANGAROUND', 'YOUNGBOYS', 'HOODBOYS', 'HOOD_PRESIDENT', 'SHOOT_CALLER', 'UNDER_OG', 'OG']) }).parse(req.body ?? {});
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, role: true, rank: true } });
+  if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
+  if (target.role !== 'USER') throw new HttpError(403, 'Rank hanya dapat diatur untuk akun Member.');
+  if (target.rank === data.rank) return res.json({ user: target, message: 'Rank tidak berubah.' });
+  const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({ where: { id: target.id }, data: { rank: data.rank }, select: { id: true, username: true, role: true, rank: true } });
+    await tx.activityLog.create({ data: { userId: req.user.id, action: 'USER_RANK_UPDATED', detail: 'Mengubah rank ' + target.username + ' dari ' + target.rank + ' menjadi ' + data.rank + '.' } });
+    return updated;
+  });
+  res.json({ user, message: 'Rank ' + user.username + ' berhasil diperbarui.' });
 }));
 
 router.patch('/users/:id/status', asyncHandler(async (req, res) => {
