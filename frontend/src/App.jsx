@@ -19,7 +19,15 @@ const MEMBER_RANKS = [
   { value: 'YOUNGBOYS', label: 'YoungBoys' },
   { value: 'HANGAROUND', label: 'Hangaround' },
 ];
-const AUTO_SYNC_INTERVAL_MS = 15000;
+const AUTO_SYNC_INTERVAL_MS = 60000;
+
+function readPageFromUrl() {
+  try {
+    return new URLSearchParams(window.location.search).get('page') || 'dashboard';
+  } catch {
+    return 'dashboard';
+  }
+}
 
 function BrandLogo({ className = '' }) {
   return <img className={`brand-logo ${className}`.trim()} src="/30s-logo.png" alt="Logo 30sFams" />;
@@ -823,11 +831,26 @@ const userNav = [
 export default function App() {
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
-  const [page, setPage] = useState('dashboard');
+  const [page, setPageState] = useState(readPageFromUrl);
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const setPage = useCallback((nextPage) => {
+    const target = typeof nextPage === 'function' ? nextPage(pageRef.current) : nextPage;
+    pageRef.current = target;
+    setPageState(target);
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get('page') || 'dashboard';
+    if (current === target) return;
+    if (target === 'dashboard') url.searchParams.delete('page');
+    else url.searchParams.set('page', target);
+    window.history.pushState({ page: target }, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageLoadError, setPageLoadError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
-  const [resources, setResources] = useState([]);
+  const [resources, setResources] = useState([]); // Catalog resources (and member dashboard data).
+  const [inventoryResources, setInventoryResources] = useState([]);
+  const [stashResources, setStashResources] = useState([]);
   const [orders, setOrders] = useState([]);
   const [archivedOrders, setArchivedOrders] = useState([]);
   const [reports, setReports] = useState(null);
@@ -863,14 +886,15 @@ export default function App() {
     if (!role) return;
     const cacheKey = `${role}:${user?.id || 'unknown'}:${targetPage}`;
     const cachedAt = pageCacheRef.current[cacheKey];
-    if (!force && cachedAt && Date.now() - cachedAt < 90000) {
+    if (!force && cachedAt && Date.now() - cachedAt < 120000) {
       if (activePageKeyRef.current === cacheKey) setPageLoading(false);
       return;
     }
     if (pageRequestsRef.current[cacheKey]) return pageRequestsRef.current[cacheKey];
 
-    if (loadedPagesRef.current.has(cacheKey)) setPageLoading(false);
-    else setPageLoading(true);
+    if (activePageKeyRef.current === cacheKey) {
+      setPageLoading(!loadedPagesRef.current.has(cacheKey));
+    }
     const task = (async () => {
       if (role === 'ADMIN') {
         switch (targetPage) {
@@ -892,12 +916,12 @@ export default function App() {
           }
           case 'inventory': {
             const data = await api('/resources?all=true');
-            setResources(data.resources || []);
+            setInventoryResources(data.resources || []);
             break;
           }
           case 'stash': {
             const data = await api('/resources/stash');
-            setResources(data.resources || []);
+            setStashResources(data.resources || []);
             break;
           }
           case 'admin-orders': {
@@ -1049,6 +1073,20 @@ export default function App() {
   }, [user?.id, user?.role, page, loadPageData, refreshNotifications]);
 
   const navItems = isAdmin ? adminNav : userNav;
+  useEffect(() => {
+    const onPopState = () => {
+      const nextPage = readPageFromUrl();
+      pageRef.current = nextPage;
+      setPageState(nextPage);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!navItems.some((item) => item.key === page)) setPage('dashboard');
+  }, [user?.id, user?.role, page, navItems, setPage]);
   const pageTitle = useMemo(() => navItems.find((item) => item.key === page)?.label || 'Dashboard', [navItems, page]);
   const setNoticeSafe = (value) => { setNotice(value); if (value) window.setTimeout(() => setNotice(null), 5500); };
 
@@ -1069,7 +1107,7 @@ export default function App() {
   async function signOut() {
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* local state is still cleared */ }
     pageCacheRef.current = {}; pageRequestsRef.current = {}; loadedPagesRef.current.clear(); setLoadedPages({});
-    setUser(null); setResources([]); setOrders([]); setArchivedOrders([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
+    setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setArchivedOrders([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
   }
 
   async function createUser(data) {
@@ -1430,11 +1468,11 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
       <div className="content-area"><Notice notice={notice} clear={() => setNotice(null)} />
         {pageLoadError?.key === currentPageKey ? <div className="panel loading-panel page-load-error"><strong>Halaman gagal dimuat</strong><p>{pageLoadError.message}</p><button type="button" className="button button-outline" onClick={retryCurrentPage}>Muat ulang halaman</button></div> : pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
-        {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
+        {page === 'dashboard' && <Dashboard user={user} resources={isAdmin ? [] : resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
         {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
-        {page === 'inventory' && isAdmin && <Inventory resources={resources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
-        {page === 'stash' && isAdmin && <StashPage resources={resources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
+        {page === 'inventory' && isAdmin && <Inventory resources={inventoryResources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
+        {page === 'stash' && isAdmin && <StashPage resources={stashResources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
         {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
         {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
