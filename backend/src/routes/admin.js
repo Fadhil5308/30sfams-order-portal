@@ -496,6 +496,50 @@ router.get('/users', asyncHandler(async (_req, res) => {
   res.json({ users });
 }));
 
+router.patch('/users/:id/role', asyncHandler(async (req, res) => {
+  const data = z.object({ role: z.enum(['ADMIN', 'USER']) }).parse(req.body ?? {});
+  if (req.params.id === req.user.id) {
+    throw new HttpError(409, 'Role akun yang sedang digunakan tidak dapat diubah sendiri.');
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, username: true, role: true },
+  });
+  if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
+  if (target.role === data.role) {
+    return res.json({ user: target, message: 'Role akun tidak berubah.' });
+  }
+
+  if (target.role === 'ADMIN' && data.role === 'USER') {
+    const superAdminCount = await prisma.user.count({ where: { role: 'ADMIN', isActive: true, registrationStatus: 'APPROVED' } });
+    if (superAdminCount <= 1) {
+      throw new HttpError(409, 'Super Admin aktif terakhir tidak dapat diturunkan menjadi Member.');
+    }
+  }
+
+  const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: target.id },
+      data: { role: data.role, sessionVersion: { increment: 1 } },
+      select: { id: true, username: true, role: true },
+    });
+    await tx.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'USER_ROLE_UPDATED',
+        detail: 'Mengubah role ' + target.username + ' dari ' + target.role + ' menjadi ' + data.role + '. Sesi lama dicabut.',
+      },
+    });
+    return updated;
+  });
+
+  res.json({
+    user,
+    message: 'Role ' + user.username + ' berhasil diubah menjadi ' + (user.role === 'ADMIN' ? 'Super Admin' : 'Member') + '.',
+  });
+}));
+
 router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
   const data = z.object({ rank: z.enum(['HANGAROUND', 'YOUNGBOYS', 'HOODBOYS', 'HOOD_PRESIDENT', 'SHOOT_CALLER', 'UNDER_OG', 'OG']) }).parse(req.body ?? {});
   const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, role: true, rank: true } });
