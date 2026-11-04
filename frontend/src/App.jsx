@@ -1068,7 +1068,7 @@ export default function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [user?.id, user?.role, page, currentPageKey, loadedPages, loadPageData]);
+  }, [user?.id, user?.role, page, currentPageKey, loadedPages[currentPageKey], loadPageData]);
 
   useEffect(() => {
     if (!user) return undefined;
