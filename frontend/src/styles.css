@@ -479,3 +479,59 @@ body { background: #090909; }
   .members-toolbar select { flex: 1; min-width: 0; }
   .members-table-footer { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Editable quantity field in the resource catalog */
+.quantity-control .quantity-input {
+  width: 72px;
+  min-width: 52px;
+  height: 32px;
+  padding: 0 5px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f0f5fc;
+  text-align: center;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.quantity-control .quantity-input:focus {
+  background: #ffffff0a;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px #638ab4;
+}
+.quantity-control .quantity-input::-webkit-inner-spin-button,
+.quantity-control .quantity-input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+.quantity-control .quantity-input:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.page-load-error {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  border-color: #68404a;
+}
+.page-load-error strong {
+  color: #f2b0b5;
+  font-size: 13px;
+}
+.page-load-error p {
+  margin: 0;
+  color: #a8b7ca;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .quantity-control .quantity-input {
+    width: 58px;
+    min-width: 46px;
+    font-size: 11px;
+  }
+}
