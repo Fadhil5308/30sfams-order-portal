@@ -942,6 +942,19 @@ export default function App() {
     finally { setBusy(false); }
   }
 
+  async function changeUserRank(userRecord, rank) {
+    setBusy(true);
+    try {
+      const result = await api(`/admin/users/${userRecord.id}/rank`, { method: 'PATCH', body: JSON.stringify({ rank }) });
+      await refresh();
+      setNoticeSafe({ type: 'success', message: result.message });
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggleUser(userRecord) {
     const nextActive = !userRecord.isActive;
     if (!window.confirm(`${nextActive ? 'Aktifkan' : 'Nonaktifkan'} akun ${userRecord.username}? ${nextActive ? 'User dapat login kembali.' : 'User akan langsung kehilangan akses saat request berikutnya.'}`)) return;
@@ -1227,7 +1240,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="Semua pesanan" description="Tinjau permintaan, setujui reservasi stok, dan tandai Completed langsung setelah resource diserahkan. Reservasi tidak kedaluwarsa otomatis; admin mengelolanya secara manual." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Batalkan order aktif</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Arsipkan semua</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} pesanan aktif</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetail={openOrderDetail} busy={busy} /></div></>}
         {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Arsip pesanan" description="Semua pesanan yang diarsipkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export arsip CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} arsip</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetail={openOrderDetail} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
         {page === 'reports' && isAdmin && <Reports reports={reports} />}
-        {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onApprove={approveRegistration} busy={busy} />}
+        {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onApprove={approveRegistration} onRankChange={changeUserRank} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
         {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
         {((isAdmin && ['catalog','my-orders','favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
