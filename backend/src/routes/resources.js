@@ -124,7 +124,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const isAdminInventoryView = req.user.role === 'ADMIN' && all === 'true';
   const where = {};
 
-  // OTHER items are never exposed through the catalog-facing endpoint.
+  // OTHER items are served only by the dedicated /stash endpoint.
   if (category && categories.includes(String(category))) {
     const requestedCategory = String(category);
     if (requestedCategory === 'OTHER' && !isAdminInventoryView) {
@@ -143,11 +143,10 @@ router.get('/', asyncHandler(async (req, res) => {
     where,
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
-  // Filter in application code so existing databases remain compatible until the
-  // additive OTHER enum migration has been applied.
-  const visibleResources = isAdminInventoryView
-    ? resources
-    : resources.filter((resource) => resource.category !== 'OTHER');
+  // Keep OTHER exclusive to /stash, including the admin inventory listing.
+  // Filtering in application code also keeps existing databases compatible
+  // until the additive OTHER enum migration has been applied.
+  const visibleResources = resources.filter((resource) => resource.category !== 'OTHER');
   res.json({ resources: visibleResources.map(serializeResource) });
 }));
 
