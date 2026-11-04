@@ -127,7 +127,7 @@ router.get('/', asyncHandler(async (req, res) => {
   // OTHER items are served only by the dedicated /stash endpoint.
   if (category && categories.includes(String(category))) {
     const requestedCategory = String(category);
-    if (requestedCategory === 'OTHER' && !isAdminInventoryView) {
+    if (requestedCategory === 'OTHER') {
       res.json({ resources: [] });
       return;
     }
