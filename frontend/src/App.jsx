@@ -430,20 +430,28 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
       </div>
       <div className="catalog-toolbar stash-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama barang atau SKU..." /></div></div>
       {visible.length ? <>
-        <div className="table-wrap"><table><thead><tr><th>Barang</th><th>Kategori</th><th>Total di brangkas</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Status</th><th>Kelola stok</th></tr></thead><tbody>
-          {visible.map((resource) => {
-            const itemTotal = Number(resource.stockTotal ?? (Number(resource.stockAvailable || 0) + Number(resource.stockReserved || 0)));
-            return <tr key={resource.id}>
-              <td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td>
-              <td><span className="category-label">{categoryLabel(resource.category)}</span></td>
-              <td className="strong-cell">{number(itemTotal)} {resource.unit}</td>
-              <td>{number(resource.stockAvailable)} {resource.unit}</td>
-              <td>{number(resource.stockReserved)} {resource.unit}</td>
-              <td><span className={`stock-tag ${resource.isActive ? (itemTotal > 0 ? 'in-stock' : 'out-stock') : 'out-stock'}`}>{resource.isActive ? (itemTotal > 0 ? 'Ada stok' : 'Stok kosong') : 'Nonaktif'}</span></td>
-              <td><button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Atur stok</button></td>
-            </tr>;
-          })}
-        </tbody></table></div>
+        <div className="resource-grid stash-resource-grid">{visible.map((resource) => {
+          const itemTotal = Number(resource.stockTotal ?? (Number(resource.stockAvailable || 0) + Number(resource.stockReserved || 0)));
+          const statusText = !resource.isActive ? 'Nonaktif' : itemTotal > 0 ? 'Ada stok' : 'Stok kosong';
+          const statusClass = resource.isActive && itemTotal > 0 ? 'in-stock' : 'out-stock';
+          return <article className="resource-card stash-resource-card" key={resource.id}>
+            <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
+              {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" />}
+              <div className="resource-art-grid" />
+              <span>{categoryLabel(resource.category)}</span>
+              {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
+              <small>{resource.sku}</small>
+            </div>
+            <div className="resource-card-body">
+              <div className="resource-name-row"><h3>{resource.name}</h3><span className={`stock-tag ${statusClass}`}>{statusText}</span></div>
+              <p>{resource.description || 'Tidak ada deskripsi untuk barang ini.'}</p>
+              <div className="resource-meta"><span>Total di brangkas</span><strong>{number(itemTotal)} {resource.unit}</strong></div>
+              <div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+              <div className="resource-meta"><span>Dicadangkan</span><strong>{number(resource.stockReserved)} {resource.unit}</strong></div>
+              <div className="resource-action"><button className="button button-outline button-full" disabled={busy} onClick={() => onStock(resource)}><SlidersHorizontal size={14} /> Atur stok</button></div>
+            </div>
+          </article>;
+        })}</div>
         <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
       </> : <EmptyState icon={Archive} title="Barang tidak ditemukan" detail={resources.length ? 'Coba ubah kata pencarian atau kategori.' : 'Belum ada barang di brangkas. Tambahkan barang khusus melalui tombol Tambah barang Stash.'} />}
     </div>
