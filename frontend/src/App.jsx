@@ -10,13 +10,13 @@ import { api, assetUrl, categoryLabel, dateTime, money, number, statusLabel, upl
 
 const CATEGORIES = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT', 'AMMO'];
 const MEMBER_RANKS = [
-  { value: 'HANGAROUND', label: 'Hangaround' },
-  { value: 'YOUNGBOYS', label: 'YoungBoys' },
-  { value: 'HOODBOYS', label: 'HoodBoys' },
-  { value: 'HOOD_PRESIDENT', label: 'Hood President' },
-  { value: 'SHOOT_CALLER', label: 'Shoot Caller' },
-  { value: 'UNDER_OG', label: 'Under OG' },
   { value: 'OG', label: 'OG' },
+  { value: 'UNDER_OG', label: 'Under OG' },
+  { value: 'SHOOT_CALLER', label: 'Shoot Caller' },
+  { value: 'HOOD_PRESIDENT', label: 'Hood President' },
+  { value: 'HOODBOYS', label: 'HoodBoys' },
+  { value: 'YOUNGBOYS', label: 'YoungBoys' },
+  { value: 'HANGAROUND', label: 'Hangaround' },
 ];
 const AUTO_SYNC_INTERVAL_MS = 15000;
 
