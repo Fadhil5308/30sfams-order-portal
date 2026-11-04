@@ -28,6 +28,17 @@ enum ResourceCategory {
   NARKO
   VEST
   ATTACHMENT
+  AMMO
+}
+
+enum UserRank {
+  HANGAROUND
+  YOUNGBOYS
+  HOODBOYS
+  HOOD_PRESIDENT
+  SHOOT_CALLER
+  UNDER_OG
+  OG
 }
 
 enum OrderStatus {
@@ -68,6 +79,7 @@ model User {
   email        String        @unique
   passwordHash String
   role         UserRole      @default(USER)
+  rank         UserRank      @default(HANGAROUND)
   isActive     Boolean       @default(true)
   registrationStatus RegistrationStatus @default(APPROVED)
   sessionVersion Int @default(0)
