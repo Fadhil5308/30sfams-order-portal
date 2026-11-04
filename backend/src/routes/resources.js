@@ -89,7 +89,7 @@ async function removeStoredImage(imageUrl) {
   }
 }
 
-const categories = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT'];
+const categories = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT', 'AMMO'];
 const createSchema = z.object({
   name: z.string().trim().min(2).max(100),
   sku: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9_-]+$/),
