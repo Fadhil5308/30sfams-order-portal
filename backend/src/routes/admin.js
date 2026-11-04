@@ -391,7 +391,7 @@ router.get('/reports', asyncHandler(async (_req, res) => {
       orderBy: { _sum: { quantity: 'desc' } },
       take: 10,
     }),
-    prisma.user.count({ where: { role: 'USER' } }),
+    prisma.user.count({ where: { role: 'USER', deletedAt: null } }),
     prisma.resource.count({ where: { isActive: true } }),
     prisma.stockMovement.count(),
   ]);
@@ -461,7 +461,7 @@ router.post('/users', asyncHandler(async (req, res) => {
 
 router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
   const data = z.object({ status: z.enum(['APPROVED', 'REJECTED']) }).parse(req.body ?? {});
-  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, email: true, role: true, registrationStatus: true, isActive: true } });
+  const target = await prisma.user.findUnique({ where: { id: req.params.id, deletedAt: null }, select: { id: true, username: true, email: true, role: true, registrationStatus: true, isActive: true } });
   if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
   if (target.role !== 'USER') throw new HttpError(403, 'Akun admin tidak dapat diproses sebagai pendaftaran user.');
   if (target.registrationStatus === 'APPROVED') throw new HttpError(409, 'Akun ini sudah diverifikasi. Gunakan pengaturan status akun untuk menonaktifkan atau mengaktifkan akses.');
@@ -490,6 +490,7 @@ router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
 
 router.get('/users', asyncHandler(async (_req, res) => {
   const users = await prisma.user.findMany({
+    where: { deletedAt: null },
     select: { id: true, username: true, email: true, role: true, rank: true, isActive: true, registrationStatus: true, createdAt: true, _count: { select: { orders: true } } },
     orderBy: { createdAt: 'desc' }, take: 500,
   });
@@ -503,8 +504,8 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
   }
 
   const target = await prisma.user.findUnique({
-    where: { id: req.params.id },
-    select: { id: true, username: true, role: true },
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, username: true, role: true }, 
   });
   if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
   if (target.role === data.role) {
@@ -512,7 +513,7 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
   }
 
   if (target.role === 'ADMIN' && data.role === 'USER') {
-    const superAdminCount = await prisma.user.count({ where: { role: 'ADMIN', isActive: true, registrationStatus: 'APPROVED' } });
+    const superAdminCount = await prisma.user.count({ where: { role: 'ADMIN', isActive: true, registrationStatus: 'APPROVED', deletedAt: null } });
     if (superAdminCount <= 1) {
       throw new HttpError(409, 'Super Admin aktif terakhir tidak dapat diturunkan menjadi Member.');
     }
@@ -542,7 +543,7 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
 
 router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
   const data = z.object({ rank: z.enum(['HANGAROUND', 'YOUNGBOYS', 'HOODBOYS', 'HOOD_PRESIDENT', 'SHOOT_CALLER', 'UNDER_OG', 'OG']) }).parse(req.body ?? {});
-  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, role: true, rank: true } });
+  const target = await prisma.user.findUnique({ where: { id: req.params.id, deletedAt: null }, select: { id: true, username: true, role: true, rank: true } });
   if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
   if (target.rank === data.rank) return res.json({ user: target, message: 'Rank tidak berubah.' });
   const user = await prisma.$transaction(async (tx) => {
@@ -555,7 +556,7 @@ router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
 
 router.patch('/users/:id/status', asyncHandler(async (req, res) => {
   const data = z.object({ isActive: z.boolean() }).parse(req.body ?? {});
-  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, role: true, isActive: true, registrationStatus: true } });
+  const target = await prisma.user.findUnique({ where: { id: req.params.id, deletedAt: null }, select: { id: true, username: true, role: true, isActive: true, registrationStatus: true } });
   if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
   if (target.role !== 'USER') throw new HttpError(403, 'Status akun admin tidak dapat diubah dari menu ini.');
   if (target.registrationStatus !== 'APPROVED') throw new HttpError(409, 'Pendaftaran harus disetujui terlebih dahulu sebelum status akun diubah.');
@@ -573,6 +574,38 @@ router.patch('/users/:id/status', asyncHandler(async (req, res) => {
     return updated;
   });
   res.json({ user, message: `Akun ${user.username} berhasil ${user.isActive ? 'diaktifkan' : 'dinonaktifkan'}.` });
+}));
+
+router.delete('/users/:id', asyncHandler(async (req, res) => {
+  const target = await prisma.user.findUnique({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, username: true, role: true },
+  });
+  if (!target) throw new HttpError(404, 'Member tidak ditemukan atau sudah dihapus.');
+  if (target.role !== 'USER') throw new HttpError(403, 'Akun Super Admin tidak dapat dihapus dari menu Member.');
+
+  const openOrders = await prisma.order.count({
+    where: { userId: target.id, status: { in: ['PENDING', 'APPROVED'] } },
+  });
+  if (openOrders > 0) {
+    throw new HttpError(409, 'Member belum dapat dihapus karena masih memiliki ' + openOrders + ' pesanan Pending/Approved. Selesaikan atau batalkan pesanan terlebih dahulu agar stok tidak tertahan.');
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: target.id },
+      data: { deletedAt: new Date(), isActive: false, sessionVersion: { increment: 1 } },
+    });
+    await tx.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'USER_SOFT_DELETED',
+        detail: 'Menghapus akun Member ' + target.username + '. Akses login dicabut; riwayat pesanan dan transaksi tetap dipertahankan.',
+      },
+    });
+  });
+
+  res.json({ message: 'Akun ' + target.username + ' berhasil dihapus dari daftar anggota. Riwayat transaksi tetap tersimpan.' });
 }));
 
 router.get('/stock-movements', asyncHandler(async (req, res) => {
@@ -595,7 +628,7 @@ router.get('/stock-movements', asyncHandler(async (req, res) => {
 router.get('/member-stats', asyncHandler(async (_req, res) => {
   const [members, completed, openOrders] = await Promise.all([
     prisma.user.findMany({
-      where: { role: 'USER' },
+      where: { role: 'USER', deletedAt: null },
       select: { id: true, username: true, email: true, isActive: true, registrationStatus: true, createdAt: true },
       orderBy: { createdAt: 'desc' }, take: 1000,
     }),
