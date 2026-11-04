@@ -366,6 +366,57 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
   </>;
 }
 
+
+function StashPage({ resources = [] }) {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  const totalAvailable = resources.reduce((sum, item) => sum + Number(item.stockAvailable || 0), 0);
+  const totalReserved = resources.reduce((sum, item) => sum + Number(item.stockReserved || 0), 0);
+  const totalStock = resources.reduce((sum, item) => sum + Number(item.stockTotal ?? (Number(item.stockAvailable || 0) + Number(item.stockReserved || 0))), 0);
+  const filtered = resources.filter((resource) => {
+    const matchesCategory = filter === 'ALL' || resource.category === filter;
+    const matchesSearch = `${resource.name} ${resource.sku} ${resource.description || ''}`.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [search, filter, resources]);
+
+  return <>
+    <SectionHeader eyebrow="BRANGKAS / STASH" title="Stash" description="Daftar seluruh barang di brangkas. Stok menggunakan data Resource yang sama, sehingga perubahan pesanan dan penyesuaian stok otomatis tercermin di sini." action={<div className="date-chip"><Archive size={15} /> {number(resources.length)} jenis barang</div>} />
+    <div className="stats-grid">
+      <StatCard label="Jenis barang" value={number(resources.length)} detail="Seluruh item terdaftar di Stash" icon={Boxes} tone="blue" />
+      <StatCard label="Total stok brangkas" value={number(totalStock)} detail="Tersedia + dicadangkan" icon={Package} tone="green" />
+      <StatCard label="Stok tersedia" value={number(totalAvailable)} detail="Dapat digunakan untuk pesanan" icon={PackagePlus} tone="purple" />
+      <StatCard label="Stok dicadangkan" value={number(totalReserved)} detail="Sedang terikat pesanan aktif" icon={ClipboardList} tone="orange" />
+    </div>
+    <div className="panel">
+      <div className="panel-heading">
+        <div><h3>Isi brangkas</h3><p>Termasuk resource katalog dan item khusus kategori Other.</p></div>
+        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="ALL">Semua kategori</option>{STASH_CATEGORIES.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select><ChevronDown size={14} /></div>
+      </div>
+      <div className="catalog-toolbar stash-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama barang atau SKU..." /></div></div>
+      {visible.length ? <>
+        <div className="table-wrap"><table><thead><tr><th>Barang</th><th>Kategori</th><th>Total di brangkas</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Status</th></tr></thead><tbody>
+          {visible.map((resource) => {
+            const itemTotal = Number(resource.stockTotal ?? (Number(resource.stockAvailable || 0) + Number(resource.stockReserved || 0)));
+            return <tr key={resource.id}>
+              <td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td>
+              <td><span className="category-label">{categoryLabel(resource.category)}</span></td>
+              <td className="strong-cell">{number(itemTotal)} {resource.unit}</td>
+              <td>{number(resource.stockAvailable)} {resource.unit}</td>
+              <td>{number(resource.stockReserved)} {resource.unit}</td>
+              <td><span className={`stock-tag ${resource.isActive ? (itemTotal > 0 ? 'in-stock' : 'out-stock') : 'out-stock'}`}>{resource.isActive ? (itemTotal > 0 ? 'Ada stok' : 'Stok kosong') : 'Nonaktif'}</span></td>
+            </tr>;
+          })}
+        </tbody></table></div>
+        <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
+      </> : <EmptyState icon={Archive} title="Barang tidak ditemukan" detail={resources.length ? 'Coba ubah kata pencarian atau kategori.' : 'Belum ada barang di brangkas. Tambahkan resource melalui Manajemen stok.'} />}
+    </div>
+  </>;
+}
+
 function Reports({ reports }) {
   if (!reports) return <div className="panel loading-panel">Memuat laporan...</div>;
   const summary = reports.summary;
