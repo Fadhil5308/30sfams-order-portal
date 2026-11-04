@@ -449,3 +449,33 @@ body { background: #090909; }
     justify-content: space-between;
   }
 }
+
+
+/* Members directory layout */
+.members-panel { padding: 0; overflow: hidden; }
+.members-toolbar { display: flex; align-items: center; gap: 10px; padding: 0 18px 14px; flex-wrap: wrap; }
+.members-toolbar select, .members-search {
+  min-height: 40px; border: 1px solid var(--border, #292a30); border-radius: 9px;
+  background: var(--surface, #101114); color: var(--text, #f5f5f5); padding: 0 12px;
+}
+.members-toolbar select { min-width: 150px; }
+.members-search { display: flex; align-items: center; gap: 9px; min-width: 230px; flex: 0 1 270px; color: var(--muted, #8b929e); }
+.members-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; }
+.members-table-wrap { border-top: 1px solid var(--border, #292a30); }
+.members-table { min-width: 760px; }
+.members-table thead th { text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
+.members-name { display: flex; align-items: center; gap: 10px; min-width: 120px; }
+.members-name strong { font-weight: 650; }
+.rank-select { min-width: 132px; max-width: 165px; border: 1px solid var(--border, #292a30); border-radius: 8px; padding: 7px 9px; background: var(--surface, #101114); color: var(--text, #f5f5f5); }
+.rank-select:disabled { opacity: .65; }
+.member-role-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.member-role-pill.admin { color: #ff777e; background: rgba(239, 68, 68, .12); border: 1px solid rgba(239, 68, 68, .25); }
+.member-role-pill.member { color: #cbd5e1; background: rgba(148, 163, 184, .1); border: 1px solid rgba(148, 163, 184, .15); }
+.members-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; color: var(--muted, #9299a5); font-size: 13px; }
+.members-table-footer .table-pagination { margin: 0; }
+@media (max-width: 700px) {
+  .members-toolbar { padding: 0 12px 12px; }
+  .members-search { flex-basis: 100%; }
+  .members-toolbar select { flex: 1; min-width: 0; }
+  .members-table-footer { align-items: flex-start; flex-direction: column; }
+}
