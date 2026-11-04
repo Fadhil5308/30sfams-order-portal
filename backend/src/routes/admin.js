@@ -22,13 +22,14 @@ router.get('/dashboard', asyncHandler(async (_req, res) => {
       _sum: { totalQuantity: true, totalAmount: true },
     }),
     prisma.resource.aggregate({
-      where: { isActive: true },
+      // Other is stash-only and must never affect the main Overview totals.
+      where: { isActive: true, category: { not: 'OTHER' } },
       _count: { _all: true },
       _sum: { stockAvailable: true, stockReserved: true },
     }),
     prisma.resource.groupBy({
       by: ['category'],
-      where: { isActive: true },
+      where: { isActive: true, category: { not: 'OTHER' } },
       _sum: { stockAvailable: true },
     }),
     prisma.order.findMany({
