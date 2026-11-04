@@ -8,7 +8,16 @@ import {
 } from 'lucide-react';
 import { api, assetUrl, categoryLabel, dateTime, money, number, statusLabel, uploadFile } from './api';
 
-const CATEGORIES = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT'];
+const CATEGORIES = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT', 'AMMO'];
+const MEMBER_RANKS = [
+  { value: 'HANGAROUND', label: 'Hangaround' },
+  { value: 'YOUNGBOYS', label: 'YoungBoys' },
+  { value: 'HOODBOYS', label: 'HoodBoys' },
+  { value: 'HOOD_PRESIDENT', label: 'Hood President' },
+  { value: 'SHOOT_CALLER', label: 'Shoot Caller' },
+  { value: 'UNDER_OG', label: 'Under OG' },
+  { value: 'OG', label: 'OG' },
+];
 const AUTO_SYNC_INTERVAL_MS = 15000;
 
 function BrandLogo({ className = '' }) {
@@ -357,47 +366,69 @@ function Reports({ reports }) {
   </>;
 }
 
-function UsersPage({ users, onCreate, onToggle, onApprove, busy }) {
+function UsersPage({ users, onCreate, onToggle, onApprove, onRankChange, busy }) {
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState({ username: '', email: '', password: '' });
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [roleFilter, setRoleFilter] = useState('ALL');
   const pageSize = 25;
-  const visibleUsers = users.slice((page - 1) * pageSize, page * pageSize);
-  useEffect(() => setPage(1), [users]);
+  const members = users.filter((user) => user.role === 'USER');
+  const filteredUsers = users.filter((user) => {
+    const term = search.trim().toLowerCase();
+    const matchesSearch = !term || user.username.toLowerCase().includes(term) || user.email.toLowerCase().includes(term);
+    const status = user.registrationStatus === 'PENDING' ? 'PENDING' : user.registrationStatus === 'REJECTED' ? 'REJECTED' : user.isActive ? 'ACTIVE' : 'INACTIVE';
+    return matchesSearch && (statusFilter === 'ALL' || status === statusFilter) && (roleFilter === 'ALL' || user.role === roleFilter);
+  });
+  const visibleUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => setPage(1), [search, statusFilter, roleFilter, users]);
   async function submit(event) {
     event.preventDefault();
     const created = await onCreate(draft);
     if (created) { setDraft({ username: '', email: '', password: '' }); setShowCreate(false); }
   }
-  const pendingCount = users.filter((user) => user.registrationStatus === 'PENDING').length;
   function statusText(user) {
-    if (user.registrationStatus === 'PENDING') return 'Menunggu persetujuan';
-    if (user.registrationStatus === 'REJECTED') return 'Ditolak';
-    return user.isActive ? 'Aktif' : 'Dinonaktifkan';
+    if (user.registrationStatus === 'PENDING') return 'Pending';
+    if (user.registrationStatus === 'REJECTED') return 'Rejected';
+    return user.isActive ? 'Active' : 'Inactive';
   }
   function statusClass(user) {
-    if (user.registrationStatus === 'PENDING') return 'out-stock';
-    if (user.registrationStatus === 'REJECTED' || !user.isActive) return 'out-stock';
+    if (user.registrationStatus === 'PENDING' || user.registrationStatus === 'REJECTED' || !user.isActive) return 'out-stock';
     return 'in-stock';
   }
+  function rankLabel(rank) { return MEMBER_RANKS.find((item) => item.value === rank)?.label || 'Hangaround'; }
   return <>
-    <SectionHeader eyebrow="USER DIRECTORY" title="Pengguna 30sFams" description="Siapa pun dapat mendaftar. Akun baru hanya dapat masuk setelah disetujui admin." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><UserPlus size={16} /> Buat akun manual</button>} />
-    {pendingCount > 0 && <div className="notice warning"><Clock3 size={17}/><span>{number(pendingCount)} pendaftaran menunggu persetujuan admin.</span></div>}
+    <SectionHeader eyebrow="MEMBER MANAGEMENT" title="Members" description="Accounts, ranks, and access." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><UserPlus size={16} /> New member</button>} />
+    {users.some((user) => user.registrationStatus === 'PENDING') && <div className="notice warning"><Clock3 size={17}/><span>{number(users.filter((user) => user.registrationStatus === 'PENDING').length)} pendaftaran menunggu persetujuan.</span></div>}
     {showCreate && <form className="panel create-resource-form" onSubmit={submit}>
-      <div className="panel-heading"><div><h3>Buat akun anggota</h3><p>Role otomatis USER dan langsung aktif. Sampaikan password awal secara pribadi.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div>
+      <div className="panel-heading"><div><h3>New member</h3><p>Akun baru langsung aktif dengan rank awal Hangaround.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div>
       <div className="form-grid user-create-grid">
-        <label>Username<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="contoh: member30s" /></label>
-        <label>Email<input required type="email" maxLength={150} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="nama@email.com" /></label>
+        <label>Username<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="username" /></label>
+        <label>Email<input required type="email" maxLength={150} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="email@domain.com" /></label>
         <label>Password awal<input required type="password" minLength={12} maxLength={100} value={draft.password} onChange={(event) => setDraft({ ...draft, password: event.target.value })} placeholder="Minimal 12 karakter" autoComplete="new-password" /></label>
       </div>
-      <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}><UserPlus size={15}/> Buat akun</button></div>
+      <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}><UserPlus size={15}/> Create member</button></div>
     </form>}
-    <div className="panel"><div className="panel-heading"><div><h3>Daftar anggota</h3><p>{number(users.filter((user) => user.role === 'USER').length)} akun user · {number(pendingCount)} menunggu persetujuan</p></div></div>
-      {users.length ? <><div className="table-wrap"><table><thead><tr><th>Pengguna</th><th>Email</th><th>Status</th><th>Bergabung</th><th>Total pesanan</th><th>Aksi</th></tr></thead><tbody>{visibleUsers.map((user) => <tr key={user.id}>
-        <td><div className="user-cell"><div className="avatar-mini">{user.username.slice(0, 1).toUpperCase()}</div><strong>{user.username}</strong><small className="cell-sub">{user.role}</small></div></td><td>{user.email}</td>
-        <td><span className={`stock-tag ${statusClass(user)}`}>{statusText(user)}</span></td><td>{dateTime(user.createdAt)}</td><td>{number(user._count.orders)}</td>
-        <td>{user.role !== 'USER' ? <span className="muted">Protected</span> : user.registrationStatus === 'PENDING' ? <div className="table-actions"><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Setujui</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Tolak</button></div> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><UserPlus size={13}/> Setujui ulang</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><UserX size={13}/> Nonaktifkan</> : <><UserPlus size={13}/> Aktifkan</>}</button>}</td>
-      </tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={users.length} onPageChange={setPage} /></> : <EmptyState icon={Users} title="Belum ada user" detail="Anggota dapat mendaftarkan akun melalui halaman login." />}
+    <div className="panel members-panel">
+      <div className="members-toolbar">
+        <label className="members-search"><Search size={16}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or username" /></label>
+        <select aria-label="Filter status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">Any status</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="PENDING">Pending</option><option value="REJECTED">Rejected</option></select>
+        <select aria-label="Filter role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="ALL">Any role</option><option value="ADMIN">Super Admin</option><option value="USER">Member</option></select>
+      </div>
+      {filteredUsers.length ? <>
+        <div className="table-wrap members-table-wrap"><table className="members-table"><thead><tr><th>Member</th><th>Rank</th><th>Role</th><th>Status</th><th>Orders</th><th>Actions</th></tr></thead><tbody>
+          {visibleUsers.map((user) => <tr key={user.id}>
+            <td><div className="members-name"><span className="avatar-mini">{user.username.slice(0,1).toUpperCase()}</span><strong>{user.username}</strong></div></td>
+            <td>{user.role === 'USER' ? <select className="rank-select" aria-label={`Rank ${user.username}`} value={user.rank || 'HANGAROUND'} disabled={busy} onChange={(event) => onRankChange(user, event.target.value)}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select> : <span className="muted">{rankLabel(user.rank)}</span>}</td>
+            <td><span className={`member-role-pill ${user.role === 'ADMIN' ? 'admin' : 'member'}`}>{user.role === 'ADMIN' ? 'Super Admin' : 'Member'}</span></td>
+            <td><span className={`stock-tag ${statusClass(user)}`}>{statusText(user)}</span></td>
+            <td className="strong-cell">{number(user._count?.orders || 0)}</td>
+            <td>{user.role !== 'USER' ? <span className="muted">Protected</span> : user.registrationStatus === 'PENDING' ? <div className="table-actions"><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Approve</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Reject</button></div> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><UserPlus size={13}/> Approve again</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><UserX size={13}/> Deactivate</> : <><UserPlus size={13}/> Activate</>}</button>}</td>
+          </tr>)}
+        </tbody></table></div>
+        <div className="members-table-footer"><span>{number(filteredUsers.length ? (page - 1) * pageSize + 1 : 0)}–{number(Math.min(page * pageSize, filteredUsers.length))} of {number(filteredUsers.length)}</span><DataPagination page={page} pageSize={pageSize} total={filteredUsers.length} onPageChange={setPage} /></div>
+      </> : <EmptyState icon={Users} title="No members found" detail="Coba ubah kata pencarian atau filter." />}
     </div>
   </>;
 }
