@@ -188,7 +188,7 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
       </div>
       <div className="dashboard-grid">
         <div className="panel"><div className="panel-heading"><div><h3>Pesanan terbaru</h3><p>Permintaan resource yang masuk</p></div><button className="text-button" onClick={() => goTo('admin-orders')}>Lihat semua <ArrowUpRight size={15} /></button></div>
-          {recentOrders.slice(0, 5).length ? <div className="compact-list">{recentOrders.slice(0, 5).map((order) => <div className="compact-row" key={order.id}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'User'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="Belum ada pesanan" detail="Pesanan pengguna akan muncul di sini." />}
+          {recentOrders.slice(0, 5).length ? <div className="compact-list">{recentOrders.slice(0, 5).map((order) => <div className="compact-row" key={order.id || order.orderNumber}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'User'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="Belum ada pesanan" detail="Pesanan pengguna akan muncul di sini." />}
         </div>
         <div className="panel"><div className="panel-heading"><div><h3>Stok per kategori</h3><p>Jumlah stok tersedia saat ini</p></div><button className="icon-button" onClick={() => goTo('inventory')} aria-label="Buka inventory"><ArrowUpRight size={17} /></button></div>
           <div className="category-stock">{CATEGORIES.map((category, index) => { const qty = categoryValues[index]; return <div className="category-stock-row" key={category}><div><span>{categoryLabel(category)}</span><strong>{number(qty)}</strong></div><div className="progress-track"><span style={{ width: `${Math.max(3, qty / maxCategoryStock * 100)}%` }} /></div></div>; })}</div>
@@ -234,6 +234,22 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
       return next;
     });
   }
+  function setCartQuantity(id, value, available) {
+    setCart((current) => {
+      const next = { ...current };
+      if (value === '') {
+        delete next[id];
+        return next;
+      }
+      const quantity = Number(value);
+      if (!Number.isFinite(quantity) || quantity <= 0 || available <= 0) {
+        delete next[id];
+      } else {
+        next[id] = Math.min(Math.floor(quantity), available);
+      }
+      return next;
+    });
+  }
   return <>
     <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Resource favorit' : 'Pilih resource'} description={favoriteOnly ? 'Daftar resource favorit yang kamu simpan untuk pemesanan berikutnya.' : isAdminMode ? 'Pilih resource untuk kebutuhan akun Super Admin. Pesanan tercatat atas nama akun ini dan tetap masuk ke daftar Semua Pesanan.' : 'Temukan item yang dibutuhkan, tentukan jumlah, lalu kirim pesanan untuk ditinjau admin.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
     <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama resource atau SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
@@ -245,7 +261,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
         <small>{resource.sku}</small>
       </div>
       <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'} aria-label={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'Tidak ada deskripsi untuk resource ini.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
-        <div className="resource-action">{cart[resource.id] ? <div className="quantity-control"><button onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} aria-label="Kurangi">−</button><strong>{cart[resource.id]}</strong><button onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={cart[resource.id] >= resource.stockAvailable} aria-label="Tambah">+</button></div> : <button className="button button-outline button-full" disabled={resource.stockAvailable <= 0} onClick={() => changeCart(resource.id, 1, resource.stockAvailable)}><ShoppingCart size={15} /> Tambah pesanan</button>}</div>
+        <div className="resource-action"><div className="quantity-control"><button type="button" onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} disabled={!cart[resource.id] || busy} aria-label={`Kurangi jumlah ${resource.name}`}>−</button><input className="quantity-input" type="number" inputMode="numeric" min="0" max={resource.stockAvailable} step="1" value={cart[resource.id] || ''} placeholder="0" disabled={resource.stockAvailable <= 0 || busy} onChange={(event) => setCartQuantity(resource.id, event.target.value, resource.stockAvailable)} aria-label={`Jumlah ${resource.name}`} /><button type="button" onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={resource.stockAvailable <= 0 || busy || (cart[resource.id] || 0) >= resource.stockAvailable} aria-label={`Tambah jumlah ${resource.name}`}>+</button></div></div>
       </div>
     </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={Search} title="Resource tidak ditemukan" detail="Coba ubah kata kunci atau filter kategori." />}
     <div className="checkout-notes panel"><label htmlFor="order-notes"><span>Catatan untuk admin <small>(opsional, maksimal 500 karakter)</small></span><textarea id="order-notes" maxLength={500} rows={2} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Contoh: Mohon proses untuk kebutuhan event malam ini." /></label><div className="notes-counter">{orderNotes.length}/500 karakter</div></div>
@@ -271,12 +287,13 @@ function DataPagination({ page, pageSize = 25, total, onPageChange }) {
 function OrderTable({ orders, isAdmin, onAction, onDetail, onRestore, onReorder, busy, readOnly = false, isArchived = false }) {
   const [page, setPage] = useState(1);
   const pageSize = 25;
-  const pageOrders = orders.slice((page - 1) * pageSize, page * pageSize);
+  const safeOrders = Array.isArray(orders) ? orders.filter(Boolean) : [];
+  const pageOrders = safeOrders.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => setPage(1), [orders]);
-  if (!orders.length) return <EmptyState icon={ClipboardList} title="Belum ada data pesanan" detail="Data pesanan akan tampil di halaman ini setelah ada transaksi." />;
+  if (!safeOrders.length) return <EmptyState icon={ClipboardList} title="Belum ada data pesanan" detail="Data pesanan akan tampil di halaman ini setelah ada transaksi." />;
   return <><div className="table-wrap"><table><thead><tr>{isAdmin && <th>Pemesan</th>}<th>Nomor pesanan</th><th>Tanggal</th>{isArchived && <th>Diarsipkan</th>}<th>Resource</th><th>Jumlah</th><th>Total nominal</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
     {isAdmin && <td><div className="user-cell"><div className="avatar-mini">{(order.user?.username || 'U').slice(0, 1).toUpperCase()}</div>{order.user?.username || '-'}</div></td>}
-    <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Catatan: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{order.items.map((item) => <span key={item.id}>{item.resourceName}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
+    <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Catatan: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{(Array.isArray(order.items) ? order.items : []).map((item) => <span key={item.id || item.resourceId || item.resourceName}>{item.resourceName || 'Resource'}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
     <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetail(order)}><FileText size={13} /> Detail</button>{isArchived && isAdmin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Pulihkan</button>}{!readOnly && isAdmin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Setujui"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Tolak"><X size={15} /></button></>}{!readOnly && isAdmin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Konfirmasi penyerahan langsung dan selesaikan"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Batalkan dan lepas stok"><X size={15} /></button></>}{!readOnly && !isAdmin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Batalkan</button>}{!readOnly && !isAdmin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Pesan ulang</button>}</div></td>
   </tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={orders.length} onPageChange={setPage} /></>;
 }
@@ -708,6 +725,7 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const [page, setPage] = useState('dashboard');
   const [pageLoading, setPageLoading] = useState(false);
+  const [pageLoadError, setPageLoadError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [resources, setResources] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -863,6 +881,17 @@ export default function App() {
     await loadPageData(page, role, true);
   }, [loadPageData, page, user?.id, user?.role]);
 
+  async function retryCurrentPage() {
+    if (!user) return;
+    setPageLoadError(null);
+    try {
+      await loadPageData(page, user.role, true);
+    } catch (error) {
+      setPageLoadError({ key: currentPageKey, message: error.message || 'Data halaman gagal dimuat.' });
+      setNoticeSafe({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
+    }
+  }
+
   const refreshNotifications = useCallback(async () => {
     if (!user?.id) return;
     const result = await api('/notifications');
@@ -876,7 +905,12 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    loadPageData(page, user.role).catch((error) => setNotice({ type: 'error', message: error.message }));
+    const pageKey = `${user.role}:${user.id}:${page}`;
+    setPageLoadError(null);
+    loadPageData(page, user.role).catch((error) => {
+      setPageLoadError({ key: pageKey, message: error.message || 'Data halaman gagal dimuat.' });
+      setNotice({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
+    });
   }, [user?.id, user?.role, page, loadPageData]);
 
   useEffect(() => {
@@ -1289,7 +1323,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
     <main className="main-area">
       <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button><div className="breadcrumb"><span>30sFams</span><span>/</span><strong>{pageTitle}</strong></div></div><div className="topbar-right"><div className="system-status"><span className="live-dot" /> System operational</div><NotificationCenter notifications={notifications} unreadCount={unreadCount} onReadAll={markAllNotificationsRead} onSelect={selectNotification} /><div className="topbar-divider" /><div className="topbar-profile"><div className="user-avatar small">{user.username.slice(0, 1).toUpperCase()}</div><div><strong>{user.username}</strong><span>{isAdmin ? 'Admin' : 'User'}</span></div></div></div></header>
       <div className="content-area"><Notice notice={notice} clear={() => setNotice(null)} />
-        {pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
+        {pageLoadError?.key === currentPageKey ? <div className="panel loading-panel page-load-error"><strong>Halaman gagal dimuat</strong><p>{pageLoadError.message}</p><button type="button" className="button button-outline" onClick={retryCurrentPage}>Muat ulang halaman</button></div> : pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
