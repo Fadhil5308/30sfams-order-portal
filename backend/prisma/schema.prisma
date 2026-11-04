@@ -29,6 +29,7 @@ enum ResourceCategory {
   VEST
   ATTACHMENT
   AMMO
+  OTHER
 }
 
 enum UserRank {
