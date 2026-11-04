@@ -212,7 +212,7 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
     </div>
   </>;
 }
-function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false }) {
+function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false, showFavorites = true }) {
   const [orderNotes, setOrderNotes] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 18;
@@ -244,7 +244,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
         {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
         <small>{resource.sku}</small>
       </div>
-      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3><button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'} aria-label={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button><span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'Tidak ada deskripsi untuk resource ini.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'} aria-label={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'Tidak ada deskripsi untuk resource ini.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
         <div className="resource-action">{cart[resource.id] ? <div className="quantity-control"><button onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} aria-label="Kurangi">−</button><strong>{cart[resource.id]}</strong><button onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={cart[resource.id] >= resource.stockAvailable} aria-label="Tambah">+</button></div> : <button className="button button-outline button-full" disabled={resource.stockAvailable <= 0} onClick={() => changeCart(resource.id, 1, resource.stockAvailable)}><ShoppingCart size={15} /> Tambah pesanan</button>}</div>
       </div>
     </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={Search} title="Resource tidak ditemukan" detail="Coba ubah kata kunci atau filter kategori." />}
@@ -684,6 +684,8 @@ function ActivityPage({ logs, discordStatus, onTestDiscord, busy }) {
 
 const adminNav = [
   { key: 'dashboard', label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
+  { key: 'catalog', label: 'Katalog & pesan', icon: ShoppingCart, group: 'WORKSPACE' },
+  { key: 'my-orders', label: 'Pesanan saya', icon: ClipboardList, group: 'WORKSPACE' },
   { key: 'inventory', label: 'Manajemen stok', icon: Boxes, group: 'WORKSPACE' },
   { key: 'stock-history', label: 'Riwayat stok', icon: History, group: 'WORKSPACE' },
   { key: 'admin-orders', label: 'Semua pesanan', icon: ClipboardList, group: 'WORKSPACE' },
@@ -758,6 +760,16 @@ export default function App() {
             const data = await api('/admin/dashboard');
             setDashboardData(data);
             setOrders(data.recentOrders || []);
+            break;
+          }
+          case 'catalog': {
+            const data = await api('/resources');
+            setResources(data.resources || []);
+            break;
+          }
+          case 'my-orders': {
+            const data = await api('/orders/mine');
+            setOrders(data.orders || []);
             break;
           }
           case 'inventory': {
@@ -1096,6 +1108,21 @@ export default function App() {
     finally { setBusy(false); }
   }
 
+  async function cancelOwnOrder(order, action) {
+    if (action !== 'cancel') return;
+    if (!window.confirm(`Batalkan pesanan ${order.orderNumber}? Stok yang sudah dicadangkan akan dikembalikan ke inventory.`)) return;
+    setBusy(true);
+    try {
+      const result = await api(`/orders/${order.id}/cancel`, { method: 'POST', body: JSON.stringify({}) });
+      await Promise.all([refresh(), refreshNotifications()]);
+      setNoticeSafe({ type: 'success', message: result.order?.orderNumber ? `Pesanan ${result.order.orderNumber} berhasil dibatalkan.` : 'Pesanan berhasil dibatalkan.' });
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitOrder(notes = '') {
     const items = Object.entries(cart).map(([resourceId, quantity]) => ({ resourceId, quantity }));
     if (!items.length) return;
@@ -1265,8 +1292,8 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
-        {page === 'catalog' && !isAdmin && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />}
-        {page === 'my-orders' && !isAdmin && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Buka detail untuk melihat item, catatan, invoice, dan riwayat status pesanan." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
+        {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} />}
+        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={resources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
         {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
@@ -1277,7 +1304,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onDelete={deleteUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
         {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
-        {((isAdmin && ['catalog','my-orders','favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
+        {((isAdmin && ['favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
         </>}
       </div>
       {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Memuat detail pesanan...</section></div>}
