@@ -70,11 +70,19 @@ export const money = (value) =>
 export const number = (value) =>
   new Intl.NumberFormat('id-ID').format(Number(value || 0));
 
-export const dateTime = (value) =>
-  new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+export const dateTime = (value) => {
+  if (value === null || value === undefined || value === '') return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  } catch {
+    return '—';
+  }
+};
 
 export const categoryLabel = (value) =>
   ({
