@@ -1045,7 +1045,7 @@ export default function App() {
   }, [user?.id, user?.role, page, loadPageData]);
 
   useEffect(() => {
-    if (!user) return undefined;
+    if (!user || !loadedPages[currentPageKey]) return undefined;
     let cancelled = false;
     const commonPages = user.role === 'ADMIN'
       ? ['catalog', 'inventory', 'stash', 'my-orders', 'admin-orders']
@@ -1068,7 +1068,7 @@ export default function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [user?.id, user?.role, page, loadPageData]);
+  }, [user?.id, user?.role, page, currentPageKey, loadedPages, loadPageData]);
 
   useEffect(() => {
     if (!user) return undefined;
