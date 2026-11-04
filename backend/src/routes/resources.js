@@ -132,8 +132,6 @@ router.get('/', asyncHandler(async (req, res) => {
       return;
     }
     where.category = requestedCategory;
-  } else if (!isAdminInventoryView) {
-    where.category = { not: 'OTHER' };
   }
 
   if (search) where.OR = [
@@ -145,7 +143,12 @@ router.get('/', asyncHandler(async (req, res) => {
     where,
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
-  res.json({ resources: resources.map(serializeResource) });
+  // Filter in application code so existing databases remain compatible until the
+  // additive OTHER enum migration has been applied.
+  const visibleResources = isAdminInventoryView
+    ? resources
+    : resources.filter((resource) => resource.category !== 'OTHER');
+  res.json({ resources: visibleResources.map(serializeResource) });
 }));
 
 router.post('/', requireAdmin, asyncHandler(async (req, res) => {
