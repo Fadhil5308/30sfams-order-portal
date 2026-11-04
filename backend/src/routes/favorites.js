@@ -13,7 +13,7 @@ router.get('/', asyncHandler(async (req, res) => {
     include: { resource: true },
     orderBy: { createdAt: 'desc' },
   });
-  res.json({ favorites: rows.filter((row) => row.resource.isActive).map((row) => ({
+  res.json({ favorites: rows.filter((row) => row.resource.isActive && row.resource.category !== 'OTHER').map((row) => ({
     id: row.id, resourceId: row.resourceId, createdAt: row.createdAt, resource: serializeResource(row.resource),
   })) });
 }));
@@ -21,7 +21,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.post('/:resourceId', asyncHandler(async (req, res) => {
   const resourceId = z.string().min(1).max(100).parse(req.params.resourceId);
   const resource = await prisma.resource.findFirst({ where: { id: resourceId, isActive: true } });
-  if (!resource) throw new HttpError(404, 'Resource tidak ditemukan atau sedang tidak aktif.');
+  if (!resource || resource.category === 'OTHER') throw new HttpError(404, 'Resource tidak ditemukan atau tidak tersedia untuk katalog.');
   const favorite = await prisma.favoriteResource.upsert({
     where: { userId_resourceId: { userId: req.user.id, resourceId } },
     create: { userId: req.user.id, resourceId },
