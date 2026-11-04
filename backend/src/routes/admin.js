@@ -665,9 +665,9 @@ router.get('/member-stats', asyncHandler(async (_req, res) => {
   }).sort((a, b) => b.totalSpend - a.totalSpend || b.completedOrders - a.completedOrders);
   res.json({
     summary: {
-      totalMembers: members.length,
-      activeMembers: members.filter((member) => member.isActive && member.registrationStatus === 'APPROVED').length,
-      pendingRegistrations: members.filter((member) => member.registrationStatus === 'PENDING').length,
+      totalMembers: members.filter((member) => !member.deletedAt).length,
+      activeMembers: members.filter((member) => !member.deletedAt && member.isActive && member.registrationStatus === 'APPROVED').length,
+      pendingRegistrations: members.filter((member) => !member.deletedAt && member.registrationStatus === 'PENDING').length,
       completedOrders: rows.reduce((sum, row) => sum + row.completedOrders, 0),
       completedAmount: Number(rows.reduce((sum, row) => sum + row.totalSpend, 0).toFixed(2)),
       completedQuantity: rows.reduce((sum, row) => sum + row.completedQuantity, 0),
