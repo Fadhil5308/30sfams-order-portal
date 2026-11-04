@@ -431,6 +431,7 @@ const createUserSchema = z.object({
   username: z.string().trim().min(3).max(24).regex(/^[a-zA-Z0-9_.-]+$/, 'Username hanya boleh berisi huruf, angka, titik, garis bawah, atau strip.'),
   email: z.email().trim().max(150),
   password: z.string().min(12, 'Password sementara minimal 12 karakter.').max(100),
+  rank: z.enum(['HANGAROUND', 'YOUNGBOYS', 'HOODBOYS', 'HOOD_PRESIDENT', 'SHOOT_CALLER', 'UNDER_OG', 'OG']).default('HANGAROUND'),
 });
 
 // Akun user hanya dapat dibuat oleh admin yang sudah terautentikasi.
@@ -443,7 +444,7 @@ router.post('/users', asyncHandler(async (req, res) => {
   const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
-      data: { username, email, passwordHash, role: 'USER', isActive: true, registrationStatus: 'APPROVED' },
+      data: { username, email, passwordHash, role: 'USER', rank: data.rank, isActive: true, registrationStatus: 'APPROVED' },
       select: { id: true, username: true, email: true, role: true, rank: true, isActive: true, registrationStatus: true, createdAt: true },
     });
     await tx.notification.create({ data: {
@@ -499,7 +500,6 @@ router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
   const data = z.object({ rank: z.enum(['HANGAROUND', 'YOUNGBOYS', 'HOODBOYS', 'HOOD_PRESIDENT', 'SHOOT_CALLER', 'UNDER_OG', 'OG']) }).parse(req.body ?? {});
   const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, role: true, rank: true } });
   if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
-  if (target.role !== 'USER') throw new HttpError(403, 'Rank hanya dapat diatur untuk akun Member.');
   if (target.rank === data.rank) return res.json({ user: target, message: 'Rank tidak berubah.' });
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({ where: { id: target.id }, data: { rank: data.rank }, select: { id: true, username: true, role: true, rank: true } });
