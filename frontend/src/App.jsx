@@ -174,7 +174,7 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
     const totalAvailable = Number(stock.available ?? resources.reduce((sum, item) => sum + item.stockAvailable, 0));
     const totalReserved = Number(stock.reserved ?? resources.reduce((sum, item) => sum + item.stockReserved, 0));
     const recentOrders = dashboardData?.recentOrders || orders;
-    const categoryValues = CATEGORIES.map((category) => Number(
+    const categoryValues = STASH_CATEGORIES.map((category) => Number(
       byCategory[category] ?? resources.filter((item) => item.category === category).reduce((sum, item) => sum + item.stockAvailable, 0)
     ));
     const maxCategoryStock = Math.max(1, ...categoryValues);
