@@ -9,6 +9,7 @@ import {
 import { api, assetUrl, categoryLabel, dateTime, money, number, statusLabel, uploadFile } from './api';
 
 const CATEGORIES = ['CLASS1', 'CLASS2', 'CLASS3', 'NARKO', 'VEST', 'ATTACHMENT', 'AMMO'];
+const STASH_CATEGORIES = [...CATEGORIES, 'OTHER'];
 const MEMBER_RANKS = [
   { value: 'OG', label: 'OG' },
   { value: 'UNDER_OG', label: 'Under OG' },
@@ -710,6 +711,7 @@ const adminNav = [
   { key: 'catalog', label: 'Katalog & pesan', icon: ShoppingCart, group: 'WORKSPACE' },
   { key: 'my-orders', label: 'Pesanan saya', icon: ClipboardList, group: 'WORKSPACE' },
   { key: 'inventory', label: 'Manajemen stok', icon: Boxes, group: 'WORKSPACE' },
+  { key: 'stash', label: 'Stash / Brangkas', icon: Archive, group: 'WORKSPACE' },
   { key: 'stock-history', label: 'Riwayat stok', icon: History, group: 'WORKSPACE' },
   { key: 'admin-orders', label: 'Semua pesanan', icon: ClipboardList, group: 'WORKSPACE' },
   { key: 'archived-orders', label: 'Arsip pesanan', icon: Archive, group: 'WORKSPACE' },
@@ -798,6 +800,11 @@ export default function App() {
           }
           case 'inventory': {
             const data = await api('/resources?all=true');
+            setResources(data.resources || []);
+            break;
+          }
+          case 'stash': {
+            const data = await api('/resources/stash');
             setResources(data.resources || []);
             break;
           }
@@ -1335,6 +1342,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
         {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={resources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
+        {page === 'stash' && isAdmin && <StashPage resources={resources} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
         {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
         {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
@@ -1344,7 +1352,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onDelete={deleteUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
         {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
-        {((isAdmin && ['favorites'].includes(page)) || (!isAdmin && ['inventory','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
+        {((isAdmin && ['favorites'].includes(page)) || (!isAdmin && ['inventory','stash','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
         </>}
       </div>
       {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Memuat detail pesanan...</section></div>}
