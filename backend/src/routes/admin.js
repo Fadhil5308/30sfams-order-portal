@@ -628,8 +628,8 @@ router.get('/stock-movements', asyncHandler(async (req, res) => {
 router.get('/member-stats', asyncHandler(async (_req, res) => {
   const [members, completed, openOrders] = await Promise.all([
     prisma.user.findMany({
-      where: { role: 'USER', deletedAt: null },
-      select: { id: true, username: true, email: true, isActive: true, registrationStatus: true, createdAt: true },
+      where: { role: 'USER' },
+      select: { id: true, username: true, email: true, isActive: true, registrationStatus: true, createdAt: true, deletedAt: true },
       orderBy: { createdAt: 'desc' }, take: 1000,
     }),
     prisma.order.groupBy({
