@@ -852,7 +852,8 @@ export default function App() {
   const [resources, setResources] = useState([]); // Catalog resources (and member dashboard data).
   const [inventoryResources, setInventoryResources] = useState([]);
   const [stashResources, setStashResources] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // Member orders / Super Admin all-orders page.
+  const [adminMyOrders, setAdminMyOrders] = useState([]);
   const [archivedOrders, setArchivedOrders] = useState([]);
   const [reports, setReports] = useState(null);
   const [finance, setFinance] = useState(null);
@@ -912,7 +913,7 @@ export default function App() {
           }
           case 'my-orders': {
             const data = await api('/orders/mine');
-            setOrders(data.orders || []);
+            setAdminMyOrders(data.orders || []);
             break;
           }
           case 'inventory': {
@@ -1134,7 +1135,7 @@ export default function App() {
   async function signOut() {
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* local state is still cleared */ }
     pageCacheRef.current = {}; pageRequestsRef.current = {}; loadedPagesRef.current.clear(); setLoadedPages({});
-    setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setArchivedOrders([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
+    setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setAdminMyOrders([]); setArchivedOrders([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
   }
 
   async function createUser(data) {
@@ -1497,7 +1498,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={isAdmin ? [] : resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
-        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
+        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={isAdmin ? adminMyOrders : orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={inventoryResources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
         {page === 'stash' && isAdmin && <StashPage resources={stashResources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
