@@ -11,12 +11,6 @@ import { sendDiscordNotification } from '../lib/discord.js';
 const router = Router();
 router.use(requireAuth);
 
-// Super Admin accounts are operational accounts and cannot create or manage member orders.
-function requireMember(req, _res, next) {
-  if (req.user?.role !== 'USER') return next(new HttpError(403, 'Akun Super Admin hanya untuk operasional dan tidak dapat membuat pesanan. Gunakan akun Member untuk memesan.'));
-  next();
-}
-
 const orderInclude = {
   items: true,
   user: { select: { id: true, username: true, email: true } },
@@ -88,7 +82,7 @@ async function releaseOrderReservation(tx, order, userId, note) {
   }
 }
 
-router.post('/', requireMember, asyncHandler(async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const data = createOrderSchema.parse(req.body);
   const order = await prisma.$transaction(async (tx) => {
     const ids = data.items.map((item) => item.resourceId);
@@ -144,14 +138,14 @@ router.post('/', requireMember, asyncHandler(async (req, res) => {
   res.status(201).json({ order: serializeOrder(order), message: 'Pesanan terkirim. Stok berhasil diamankan dan menunggu persetujuan admin.' });
 }));
 
-router.get('/mine', requireMember, asyncHandler(async (req, res) => {
+router.get('/mine', asyncHandler(async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { userId: req.user.id }, include: orderListInclude, orderBy: { createdAt: 'desc' }, take: 200,
   });
   res.json({ orders: orders.map(serializeOrder) });
 }));
 
-router.get('/:id', requireMember, asyncHandler(async (req, res) => {
+router.get('/:id', asyncHandler(async (req, res) => {
   const order = await prisma.order.findFirst({
     where: { id: req.params.id, userId: req.user.id },
     include: orderInclude,
@@ -160,7 +154,7 @@ router.get('/:id', requireMember, asyncHandler(async (req, res) => {
   res.json({ order: serializeOrder(order) });
 }));
 
-router.post('/:id/reorder', requireMember, asyncHandler(async (req, res) => {
+router.post('/:id/reorder', asyncHandler(async (req, res) => {
   const previous = await prisma.order.findFirst({
     where: { id: req.params.id, userId: req.user.id },
     include: { items: true },
@@ -219,7 +213,7 @@ router.post('/:id/reorder', requireMember, asyncHandler(async (req, res) => {
   res.status(201).json({ order: serializeOrder(newOrder), message: `Pesanan ulang ${newOrder.orderNumber} berhasil dikirim dan stok diamankan. Harga menggunakan harga saat ini.` });
 }));
 
-router.post('/:id/cancel', requireMember, asyncHandler(async (req, res) => {
+router.post('/:id/cancel', asyncHandler(async (req, res) => {
   const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { items: true } });
     if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
