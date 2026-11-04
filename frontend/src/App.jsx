@@ -452,7 +452,13 @@ function UsersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChang
 
 function jakartaDateInput(value) {
   if (!value) return '';
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  } catch {
+    return '';
+  }
 }
 function todayJakartaInput() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
