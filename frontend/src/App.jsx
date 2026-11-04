@@ -1311,7 +1311,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
 
   async function createResource(data) {
     setBusy(true);
-    try { await api('/resources', { method: 'POST', body: JSON.stringify(data) }); await refresh(); setNoticeSafe({ type: 'success', message: 'Resource berhasil ditambahkan.' }); return true; }
+    try { await api('/resources', { method: 'POST', body: JSON.stringify(data) }); await refresh(); setNoticeSafe({ type: 'success', message: data.category === 'OTHER' ? 'Item berhasil ditambahkan ke Stash.' : 'Resource berhasil ditambahkan ke katalog.' }); return true; }
     catch (error) { setNoticeSafe({ type: 'error', message: error.message }); return false; }
     finally { setBusy(false); }
   }
