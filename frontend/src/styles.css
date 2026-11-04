@@ -535,3 +535,28 @@ body { background: #090909; }
     font-size: 11px;
   }
 }
+
+
+/* Stash uses the same visual card language as the resource ordering catalog. */
+.stash-resource-grid {
+  padding: 16px;
+  padding-bottom: 16px;
+}
+.stash-resource-card .resource-art {
+  height: 132px;
+}
+.stash-resource-card .resource-card-body {
+  min-height: 218px;
+  display: flex;
+  flex-direction: column;
+}
+.stash-resource-card .resource-card-body > p {
+  min-height: 30px;
+}
+.stash-resource-card .resource-action {
+  margin-top: auto;
+  padding-top: 14px;
+}
+.stash-resource-card .resource-action .button {
+  justify-content: center;
+}
