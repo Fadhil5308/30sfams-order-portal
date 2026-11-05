@@ -38,6 +38,7 @@ function makeOrderNumber() {
 // Reserve stock in the same transaction that creates the pending order.
 // Conditional updates prevent two concurrent requests from overselling inventory.
 async function reserveOrderItems(tx, items, orderId, userId, orderNumber) {
+  const movements = [];
   for (const item of items) {
     const changed = await tx.resource.updateMany({
       where: { id: item.resourceId, isActive: true, stockAvailable: { gte: item.quantity } },
@@ -47,11 +48,12 @@ async function reserveOrderItems(tx, items, orderId, userId, orderNumber) {
       const current = await tx.resource.findUnique({ where: { id: item.resourceId }, select: { stockAvailable: true } });
       throw new HttpError(409, 'Stok ' + item.resourceName + ' tidak mencukupi. Tersedia saat ini: ' + (current?.stockAvailable ?? 0) + '. Pesanan tidak dibuat.');
     }
-    await tx.stockMovement.create({ data: {
+    movements.push({
       resourceId: item.resourceId, userId, orderId, type: 'RESERVED', quantity: item.quantity,
       note: 'Cadangan otomatis saat pesanan ' + orderNumber + ' dibuat.',
-    } });
+    });
   }
+  if (movements.length) await tx.stockMovement.createMany({ data: movements });
 }
 
 // Legacy Pending orders created before this change have no RESERVED movement.
@@ -117,26 +119,41 @@ router.post('/', asyncHandler(async (req, res) => {
     const created = await tx.order.create({
       data: {
         orderNumber, userId: req.user.id, notes: data.notes,
-        totalQuantity, totalAmount, items: { create: items },
+        totalQuantity, totalAmount,
+        items: { create: items },
+        statusHistory: { create: {
+          changedById: req.user.id, fromStatus: null, toStatus: 'PENDING',
+          note: 'Pesanan dibuat dan stok langsung dicadangkan sambil menunggu persetujuan admin.',
+        } },
       },
+      include: orderInclude,
     });
     await reserveOrderItems(tx, items, created.id, req.user.id, orderNumber);
-    await tx.orderStatusHistory.create({ data: {
-      orderId: created.id, changedById: req.user.id, fromStatus: null, toStatus: 'PENDING',
-      note: 'Pesanan dibuat dan stok langsung dicadangkan sambil menunggu persetujuan admin.',
-    } });
-    await notifyAdmins(tx, {
+    return created;
+  }, { maxWait: 10000, timeout: 15000 });
+
+  // In-app notifications are secondary to the order and stock reservation.
+  // Persist them after the core transaction so notification latency cannot
+  // cause a valid order to roll back or exceed the transaction timeout.
+  try {
+    await notifyAdmins(prisma, {
       type: 'ORDER_CREATED', title: 'Pesanan baru masuk',
-      message: `${req.user.username} membuat pesanan ${created.orderNumber}. Stok sudah dicadangkan; periksa dan tinjau permintaan ini.`,
-      orderId: created.id,
+      message: `${req.user.username} membuat pesanan ${order.orderNumber}. Stok sudah dicadangkan; periksa dan tinjau permintaan ini.`,
+      orderId: order.id,
     });
-    await notifyUsers(tx, [req.user.id], {
+  } catch (error) {
+    console.error('Notifikasi admin untuk pesanan gagal disimpan:', error);
+  }
+  try {
+    await notifyUsers(prisma, [req.user.id], {
       type: 'ORDER_STATUS', title: 'Pesanan berhasil diterima',
-      message: `Pesanan ${created.orderNumber} sudah diterima dan stok telah dicadangkan sambil menunggu persetujuan admin.`,
-      orderId: created.id,
+      message: `Pesanan ${order.orderNumber} sudah diterima dan stok telah dicadangkan sambil menunggu persetujuan admin.`,
+      orderId: order.id,
     });
-    return tx.order.findUnique({ where: { id: created.id }, include: orderInclude });
-  });
+  } catch (error) {
+    console.error('Notifikasi pemesan gagal disimpan:', error);
+  }
+
   void sendDiscordNotification({ title: 'Pesanan baru 30sFams', description: `Anggota **${req.user.username}** mengirim pesanan **${order.orderNumber}** berisi ${order.totalQuantity} unit dan menunggu persetujuan admin.` });
   res.status(201).json({ order: serializeOrder(order), message: 'Pesanan terkirim. Stok berhasil diamankan dan menunggu persetujuan admin.' });
 }));
