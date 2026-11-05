@@ -112,6 +112,7 @@ async function ensureOrderReservation(tx, order, userId) {
     }
     return false;
   }
+  const newMovements = [];
   for (const item of order.items) {
     const changed = await tx.resource.updateMany({
       where: { id: item.resourceId, isActive: true, stockAvailable: { gte: item.quantity } },
@@ -121,11 +122,12 @@ async function ensureOrderReservation(tx, order, userId) {
       const current = await tx.resource.findUnique({ where: { id: item.resourceId }, select: { stockAvailable: true } });
       throw new HttpError(409, 'Stok ' + item.resourceName + ' tidak mencukupi. Tersedia saat ini: ' + (current?.stockAvailable ?? 0) + '. Pesanan belum disetujui.');
     }
-    await tx.stockMovement.create({ data: {
+    newMovements.push({
       resourceId: item.resourceId, userId, orderId: order.id, type: 'RESERVED', quantity: item.quantity,
       note: 'Cadangan stok untuk pesanan lama ' + order.orderNumber + ' saat disetujui admin.',
-    } });
+    });
   }
+  if (newMovements.length) await tx.stockMovement.createMany({ data: newMovements });
   return true;
 }
 
@@ -273,12 +275,16 @@ router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'APPROVED',
       note: 'Pesanan disetujui admin. Stok yang telah dicadangkan tetap diamankan.',
     } });
-    await notifyOrderOwner(tx, order, {
-      type: 'ORDER_STATUS', title: 'Pesanan disetujui',
-      message: `Pesanan ${order.orderNumber} disetujui. Stok tetap diamankan dan menunggu penyerahan resource.`,
-    });
     return tx.order.update({ where: { id: order.id }, data: { status: 'APPROVED', approvedAt: new Date() }, include: orderInclude });
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 15000 });
+  try {
+    await notifyOrderOwner(prisma, updated, {
+      type: 'ORDER_STATUS', title: 'Pesanan disetujui',
+      message: `Pesanan ${updated.orderNumber} disetujui. Stok tetap diamankan dan menunggu penyerahan resource.`,
+    });
+  } catch (error) {
+    console.error('Notifikasi persetujuan pesanan gagal disimpan:', error);
+  }
   void sendDiscordNotification({ title: 'Pesanan disetujui', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** disetujui. Stok telah dicadangkan.` });
   res.json({ order: serializeOrder(updated), message: 'Pesanan disetujui. Stok tetap diamankan dan tidak dipotong dua kali.' });
 }));
@@ -295,12 +301,16 @@ router.post('/orders/:id/reject', asyncHandler(async (req, res) => {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'REJECTED',
       note: data.adminNotes || 'Pesanan ditolak oleh admin.',
     } });
-    await notifyOrderOwner(tx, order, {
-      type: 'ORDER_STATUS', title: 'Pesanan ditolak',
-      message: `Pesanan ${order.orderNumber} ditolak oleh admin.${data.adminNotes ? ` Catatan: ${data.adminNotes}` : ''}`,
-    });
     return tx.order.update({ where: { id: order.id }, data: { status: 'REJECTED', adminNotes: data.adminNotes }, include: orderInclude });
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 15000 });
+  try {
+    await notifyOrderOwner(prisma, updated, {
+      type: 'ORDER_STATUS', title: 'Pesanan ditolak',
+      message: `Pesanan ${updated.orderNumber} ditolak oleh admin.${data.adminNotes ? ` Catatan: ${data.adminNotes}` : ''}`,
+    });
+  } catch (error) {
+    console.error('Notifikasi penolakan pesanan gagal disimpan:', error);
+  }
   void sendDiscordNotification({ title: 'Pesanan ditolak', description: `Pesanan **${updated.orderNumber}** ditolak oleh admin.` , color: 0xD97706 });
   res.json({ order: serializeOrder(updated) });
 }));
@@ -318,17 +328,19 @@ router.post('/orders/:id/complete', asyncHandler(async (req, res) => {
     const completedAt = new Date();
     const transition = await tx.order.updateMany({ where: { id: order.id, status: 'APPROVED' }, data: { status: 'COMPLETED', completedAt } });
     if (transition.count !== 1) throw new HttpError(409, 'Status pesanan berubah saat diproses. Muat ulang data sebelum mencoba lagi.');
+    const completedMovements = [];
     for (const item of order.items) {
       const changed = await tx.resource.updateMany({
         where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
         data: { stockReserved: { decrement: item.quantity } },
       });
       if (changed.count !== 1) throw new HttpError(409, `Cadangan stok ${item.resourceName} tidak konsisten. Periksa stock movement.`);
-      await tx.stockMovement.create({ data: {
+      completedMovements.push({
         resourceId: item.resourceId, userId: req.user.id, orderId: order.id,
         type: 'COMPLETED', quantity: item.quantity, note: `Resource dikeluarkan untuk ${order.orderNumber}`,
-      } });
+      });
     }
+    if (completedMovements.length) await tx.stockMovement.createMany({ data: completedMovements });
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_COMPLETED', detail: `Menyelesaikan pesanan ${order.orderNumber}` } });
     await tx.gangCashEntry.create({
       data: {
@@ -341,12 +353,18 @@ router.post('/orders/:id/complete', asyncHandler(async (req, res) => {
       orderId: order.id, changedById: req.user.id, fromStatus: 'APPROVED', toStatus: 'COMPLETED',
       note: `Resource diserahkan langsung oleh ${req.user.username} dan pesanan ditandai selesai.${data.handoverNote ? ` Catatan penyerahan: ${data.handoverNote}` : ''}`,
     } });
-    await notifyOrderOwner(tx, order, {
-      type: 'ORDER_STATUS', title: 'Resource telah diserahkan',
-      message: `Pesanan ${order.orderNumber} telah diserahkan dan ditandai selesai oleh admin.${data.handoverNote ? ` Catatan: ${data.handoverNote}` : ''}`,
-    });
     return tx.order.findUnique({ where: { id: order.id }, include: orderInclude });
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 15000 });
+
+  // Notification delivery must not keep the stock/cash transaction open.
+  try {
+    await notifyOrderOwner(prisma, updated, {
+      type: 'ORDER_STATUS', title: 'Resource telah diserahkan',
+      message: `Pesanan ${updated.orderNumber} telah diserahkan dan ditandai selesai oleh admin.${data.handoverNote ? ` Catatan: ${data.handoverNote}` : ''}`,
+    });
+  } catch (error) {
+    console.error('Notifikasi penyelesaian pesanan gagal disimpan:', error);
+  }
   void sendDiscordNotification({ title: 'Resource diserahkan', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** selesai. Resource telah diserahkan.` , color: 0x16A34A });
   res.json({ order: serializeOrder(updated), message: 'Pesanan selesai. Stok yang dicadangkan telah dikeluarkan dari inventory.' });
 }));
@@ -363,12 +381,16 @@ router.post('/orders/:id/cancel', asyncHandler(async (req, res) => {
       orderId: order.id, changedById: req.user.id, fromStatus: order.status, toStatus: 'CANCELLED',
       note: data.adminNotes || 'Pesanan dibatalkan oleh admin.',
     } });
-    await notifyOrderOwner(tx, order, {
-      type: 'ORDER_STATUS', title: 'Pesanan dibatalkan',
-      message: `Pesanan ${order.orderNumber} dibatalkan oleh admin.${data.adminNotes ? ` Catatan: ${data.adminNotes}` : ''}`,
-    });
     return tx.order.update({ where: { id: order.id }, data: { status: 'CANCELLED', adminNotes: data.adminNotes }, include: orderInclude });
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 15000 });
+  try {
+    await notifyOrderOwner(prisma, updated, {
+      type: 'ORDER_STATUS', title: 'Pesanan dibatalkan',
+      message: `Pesanan ${updated.orderNumber} dibatalkan oleh admin.${data.adminNotes ? ` Catatan: ${data.adminNotes}` : ''}`,
+    });
+  } catch (error) {
+    console.error('Notifikasi pembatalan pesanan gagal disimpan:', error);
+  }
   void sendDiscordNotification({ title: 'Pesanan dibatalkan', description: `Pesanan **${updated.orderNumber}** dibatalkan oleh admin.`, color: 0xD97706 });
   res.json({ order: serializeOrder(updated), message: 'Pesanan dibatalkan.' });
 }));
