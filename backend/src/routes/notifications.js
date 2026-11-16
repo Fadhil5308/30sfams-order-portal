@@ -23,7 +23,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.patch('/:id/read', asyncHandler(async (req, res) => {
   const id = z.string().min(1).parse(req.params.id);
   const existing = await prisma.notification.findFirst({ where: { id, userId: req.user.id } });
-  if (!existing) throw new HttpError(404, 'Notifikasi tidak ditemukan.');
+  if (!existing) throw new HttpError(404, 'Notification not found.');
   const notification = existing.isRead ? existing : await prisma.notification.update({
     where: { id }, data: { isRead: true }, include: { order: { select: { id: true, orderNumber: true } } },
   });
