@@ -16,8 +16,8 @@ import financeRoutes from './routes/finance.js';
 import favoriteRoutes from './routes/favorites.js';
 import { prisma } from './lib/prisma.js';
 
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL belum diatur. Salin .env.example menjadi .env.');
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('JWT_SECRET wajib memiliki minimal 32 karakter.');
+if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured. Copy .env.example to .env.');
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be at least 32 characters long.');
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -65,8 +65,8 @@ app.use(cors({ origin(origin, callback) {
 app.use((req, res, next) => {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
   const origin = req.get('origin');
-  if (!origin && isProduction) return res.status(403).json({ message: 'Origin request tidak tersedia. Permintaan ditolak demi keamanan.' });
-  if (origin && !allowedOrigins.includes(origin)) return res.status(403).json({ message: 'Origin tidak diizinkan.' });
+  if (!origin && isProduction) return res.status(403).json({ message: 'Request origin is missing. The request was rejected for security reasons.' });
+  if (origin && !allowedOrigins.includes(origin)) return res.status(403).json({ message: 'Request origin is not allowed.' });
   next();
 });
 app.use(express.json({ limit: '1mb' }));
@@ -85,9 +85,9 @@ if (!isVercel) {
   }));
 }
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Terlalu banyak percobaan login/registrasi. Coba lagi 15 menit kemudian.' } });
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Batas permintaan API tercapai. Coba lagi beberapa saat.' } });
-const orderLimiter = rateLimit({ windowMs: 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Terlalu banyak percobaan membuat pesanan. Tunggu satu menit.' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Too many login or registration attempts. Please try again in 15 minutes.' } });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'API request limit reached. Please try again later.' } });
+const orderLimiter = rateLimit({ windowMs: 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false,validate: { forwardedHeader: false }, message: { message: 'Too many order attempts. Please wait one minute.' } });
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
@@ -102,18 +102,18 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/favorites', favoriteRoutes);
 
-app.use((req, res) => res.status(404).json({ message: `Endpoint ${req.method} ${req.path} tidak ditemukan.` }));
+app.use((req, res) => res.status(404).json({ message: `Endpoint ${req.method} ${req.path} was not found.` }));
 app.use((error, _req, res, _next) => {
   if (error instanceof ZodError) {
-    return res.status(400).json({ message: 'Data yang dikirim belum valid.', errors: error.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message })) });
+    return res.status(400).json({ message: 'The submitted data is invalid.', errors: error.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message })) });
   }
-if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'Ukuran gambar maksimal 4 MB.' });
-  if (error.code === 'P2002') return res.status(409).json({ message: 'Data unik sudah digunakan (misalnya username, email, atau SKU).' });
-  if (error.code === 'P2025') return res.status(404).json({ message: 'Data tidak ditemukan.' });
-  if (error.code === 'P2034') return res.status(409).json({ message: 'Ada transaksi bersamaan. Muat ulang data lalu coba lagi.' });
+if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'Image size must not exceed 4 MB.' });
+  if (error.code === 'P2002') return res.status(409).json({ message: 'A unique value is already in use (for example, username, email, or SKU).' });
+  if (error.code === 'P2025') return res.status(404).json({ message: 'The requested data was not found.' });
+  if (error.code === 'P2034') return res.status(409).json({ message: 'A concurrent transaction occurred. Reload the data and try again.' });
   const status = Number.isInteger(error.status) ? error.status : 500;
   if (status >= 500) console.error(error);
-  res.status(status).json({ message: status >= 500 ? 'Terjadi kesalahan pada server.' : error.message });
+  res.status(status).json({ message: status >= 500 ? 'A server error occurred.' : error.message });
 });
 
 // Ekspor aplikasi agar dapat digunakan oleh Vercel.
