@@ -32,7 +32,7 @@ export async function uploadFile(path, file) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.message || `Upload gagal (${response.status}).`);
+    throw new Error(payload.message || `Upload failed (${response.status}).`);
   }
 
   return payload;
@@ -53,7 +53,7 @@ export async function api(path, options = {}) {
     response.status === 204 ? {} : await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.message || `Request gagal (${response.status}).`);
+    throw new Error(payload.message || `Request failed (${response.status}).`);
   }
 
   return payload;
@@ -68,14 +68,14 @@ export const money = (value) =>
   }).format(Number(value || 0));
 
 export const number = (value) =>
-  new Intl.NumberFormat('id-ID').format(Number(value || 0));
+  new Intl.NumberFormat('en-US').format(Number(value || 0));
 
 export const dateTime = (value) => {
   if (value === null || value === undefined || value === '') return '—';
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return '—';
   try {
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-US', {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(date);
@@ -89,7 +89,7 @@ export const categoryLabel = (value) =>
     CLASS1: 'Class 1',
     CLASS2: 'Class 2',
     CLASS3: 'Class 3',
-    NARKO: 'Narko',
+    NARKO: 'Narcotics',
     VEST: 'Vest',
     ATTACHMENT: 'Attachment',
     AMMO: 'Ammo',
@@ -99,8 +99,8 @@ export const categoryLabel = (value) =>
 export const statusLabel = (value) =>
   ({
     PENDING: 'Pending',
-    APPROVED: 'Disetujui',
-    REJECTED: 'Ditolak',
-    COMPLETED: 'Selesai',
-    CANCELLED: 'Dibatalkan',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
   }[value] || value);
