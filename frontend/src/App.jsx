@@ -842,6 +842,113 @@ function exportCashEntries(entries) {
   const link = document.createElement('a'); link.href = url; link.download = `30sFams-cash-ledger-${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
 }
 
+const MANUAL_NOTE_CATEGORIES = [
+  { value: 'UMUM', label: 'Umum' },
+  { value: 'OPERASIONAL', label: 'Operasional' },
+  { value: 'STOK', label: 'Stok' },
+  { value: 'PESANAN', label: 'Pesanan' },
+  { value: 'PENGUMUMAN', label: 'Pengumuman' },
+  { value: 'LAINNYA', label: 'Lainnya' },
+];
+
+function ManualNotesPage({ notes = [], onSave, onDelete, busy }) {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const emptyDraft = { title: '', category: 'UMUM', content: '' };
+  const [draft, setDraft] = useState(emptyDraft);
+  const pageSize = 12;
+
+  const filtered = notes.filter((note) => {
+    const matchesCategory = filter === 'ALL' || note.category === filter;
+    const searchable = `${note.title || ''} ${note.content || ''} ${note.createdBy?.username || ''}`.toLowerCase();
+    return matchesCategory && searchable.includes(search.toLowerCase());
+  });
+  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => setPage(1), [search, filter, notes]);
+
+  function openCreate() {
+    setEditingId(null);
+    setDraft(emptyDraft);
+    setShowForm(true);
+  }
+
+  function openEdit(note) {
+    setEditingId(note.id);
+    setDraft({ title: note.title || '', category: note.category || 'UMUM', content: note.content || '' });
+    setShowForm(true);
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    const saved = await onSave({
+      title: draft.title.trim(),
+      category: draft.category,
+      content: draft.content.trim(),
+    }, editingId);
+    if (saved) {
+      setShowForm(false);
+      setEditingId(null);
+      setDraft(emptyDraft);
+    }
+  }
+
+  return <>
+    <SectionHeader
+      eyebrow="ADMIN NOTES & RECORDS"
+      title="Log Catatan"
+      description="Catatan manual untuk informasi operasional, stok, pesanan, pengumuman, dan hal penting lainnya."
+      action={<button className="button button-primary" onClick={openCreate}><FileText size={16} /> Tambah catatan</button>}
+    />
+
+    {showForm && <form className="panel create-resource-form manual-note-form" onSubmit={submit}>
+      <div className="panel-heading">
+        <div><h3>{editingId ? 'Edit catatan' : 'Catatan baru'}</h3><p>Catatan ini hanya dapat dilihat dan dikelola oleh Super Admin.</p></div>
+        <button type="button" className="icon-button" disabled={busy} onClick={() => { setShowForm(false); setEditingId(null); }} aria-label="Tutup"><X size={17} /></button>
+      </div>
+      <div className="form-grid manual-note-fields">
+        <label>Judul catatan<input required minLength={3} maxLength={120} value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Contoh: Catatan operasional minggu ini" /></label>
+        <label>Kategori<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{MANUAL_NOTE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+        <label className="span-two">Isi catatan<textarea required maxLength={20000} rows={7} value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} placeholder="Tuliskan catatan secara detail di sini..." /></label>
+      </div>
+      <div className="form-footer">
+        <button type="button" className="button button-ghost" disabled={busy} onClick={() => { setShowForm(false); setEditingId(null); }}>Batal</button>
+        <button className="button button-primary" disabled={busy || draft.title.trim().length < 3 || !draft.content.trim()}><Check size={15} /> {busy ? 'Menyimpan...' : editingId ? 'Simpan perubahan' : 'Simpan catatan'}</button>
+      </div>
+    </form>}
+
+    <div className="panel manual-notes-panel">
+      <div className="panel-heading">
+        <div><h3>Daftar catatan</h3><p>{number(filtered.length)} catatan ditemukan · {number(notes.length)} total tersimpan</p></div>
+        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="ALL">Semua kategori</option>{MANUAL_NOTE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><ChevronDown size={14} /></div>
+      </div>
+      <div className="catalog-toolbar manual-notes-toolbar">
+        <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari judul, isi, atau pembuat catatan..." /></div>
+      </div>
+      {visible.length ? <>
+        <div className="manual-notes-grid">{visible.map((note) => {
+          const categoryLabelText = MANUAL_NOTE_CATEGORIES.find((item) => item.value === note.category)?.label || note.category;
+          const updated = note.updatedAt && note.createdAt && new Date(note.updatedAt).getTime() - new Date(note.createdAt).getTime() > 1000;
+          return <article className="manual-note-card" key={note.id}>
+            <div className="manual-note-card-top"><span className="manual-note-category">{categoryLabelText}</span><time>{dateTime(note.createdAt)}</time></div>
+            <h3>{note.title}</h3>
+            <p className="manual-note-content">{note.content}</p>
+            <div className="manual-note-meta"><span>Oleh <strong>{note.createdBy?.username || 'Akun dihapus'}</strong></span>{updated && <span>Diperbarui {dateTime(note.updatedAt)}</span>}</div>
+            <div className="manual-note-actions">
+              <button className="button button-small button-outline" disabled={busy} onClick={() => openEdit(note)}><Pencil size={13} /> Edit</button>
+              <button className="action-button reject" disabled={busy} onClick={() => onDelete(note)} title="Hapus catatan"><Trash2 size={14} /></button>
+            </div>
+          </article>;
+        })}</div>
+        <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
+      </> : <EmptyState icon={FileText} title="Belum ada catatan" detail={notes.length ? 'Tidak ada catatan yang cocok dengan pencarian atau kategori ini.' : 'Tambahkan catatan manual pertama untuk mulai menyimpan informasi operasional.'} />}
+    </div>
+  </>;
+}
+
 function ActivityPage({ logs, discordStatus, onTestDiscord, busy }) {
   const [page, setPage] = useState(1);
   const pageSize = 25;
@@ -861,6 +968,7 @@ const adminNav = [
   { key: 'inventory', label: 'Manajemen stok', icon: Boxes, group: 'WORKSPACE' },
   { key: 'stash', label: 'Stash / Brangkas', icon: Archive, group: 'WORKSPACE' },
   { key: 'stock-history', label: 'Riwayat stok', icon: History, group: 'WORKSPACE' },
+  { key: 'notes', label: 'Log Catatan', icon: FileText, group: 'WORKSPACE' },
   { key: 'admin-orders', label: 'Semua pesanan', icon: ClipboardList, group: 'WORKSPACE' },
   { key: 'archived-orders', label: 'Arsip pesanan', icon: Archive, group: 'WORKSPACE' },
   { key: 'reports', label: 'Laporan transaksi', icon: ChartNoAxesCombined, group: 'INSIGHTS' },
@@ -909,6 +1017,7 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [memberStats, setMemberStats] = useState(null);
   const [stockMovements, setStockMovements] = useState([]);
+  const [manualNotes, setManualNotes] = useState([]);
   const [discordStatus, setDiscordStatus] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -1007,6 +1116,11 @@ export default function App() {
           case 'member-stats':
             setMemberStats(await api('/admin/member-stats'));
             break;
+          case 'notes': {
+            const data = await api('/admin/notes');
+            setManualNotes(data.notes || []);
+            break;
+          }
           case 'stock-history': {
             const data = await api('/admin/stock-movements?limit=200');
             setStockMovements(data.movements || []);
@@ -1183,7 +1297,7 @@ export default function App() {
   async function signOut() {
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* local state is still cleared */ }
     pageCacheRef.current = {}; pageRequestsRef.current = {}; loadedPagesRef.current.clear(); setLoadedPages({});
-    setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setAdminMyOrders([]); setArchivedOrders([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
+    setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setAdminMyOrders([]); setArchivedOrders([]); setManualNotes([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
   }
 
   async function createUser(data) {
@@ -1566,8 +1680,9 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
         {page === 'reports' && isAdmin && <Reports reports={reports} />}
         {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onDelete={deleteUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
+        {page === 'notes' && isAdmin && <ManualNotesPage notes={manualNotes} onSave={saveManualNote} onDelete={deleteManualNote} busy={busy} />}
         {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
-        {((isAdmin && ['favorites'].includes(page)) || (!isAdmin && ['inventory','stash','stock-history','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
+        {((isAdmin && ['favorites'].includes(page)) || (!isAdmin && ['inventory','stash','stock-history','notes','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
         </>}
       </div>
       {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Memuat detail pesanan...</section></div>}
