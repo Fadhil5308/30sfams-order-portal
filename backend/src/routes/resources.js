@@ -98,6 +98,7 @@ const createSchema = z.object({
   unit: z.string().trim().min(1).max(24).default('unit'),
   unitPrice: z.coerce.number().min(0).max(1_000_000_000),
   initialStock: z.coerce.number().int().min(0).max(1_000_000).default(0),
+  minStock: z.coerce.number().int().min(0).max(1_000_000).default(0),
 });
 const updateSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
@@ -106,6 +107,7 @@ const updateSchema = z.object({
   category: z.enum(categories).optional(),
   unit: z.string().trim().min(1).max(24).optional(),
   unitPrice: z.coerce.number().min(0).max(1_000_000_000).optional(),
+  minStock: z.coerce.number().int().min(0).max(1_000_000).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -158,7 +160,7 @@ router.post('/', requireAdmin, asyncHandler(async (req, res) => {
       data: {
         name: data.name, sku: data.sku.toUpperCase(), description: data.description,
         category: data.category, unit: data.unit, unitPrice: data.unitPrice,
-        stockAvailable: data.initialStock,
+        stockAvailable: data.initialStock, minStock: data.minStock,
       },
     });
     if (data.initialStock > 0) {
