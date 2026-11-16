@@ -699,6 +699,97 @@ router.get('/member-stats', asyncHandler(async (_req, res) => {
   });
 }));
 
+const manualNoteCategories = ['UMUM', 'OPERASIONAL', 'STOK', 'PESANAN', 'PENGUMUMAN', 'LAINNYA'];
+const manualNoteSchema = z.object({
+  title: z.string().trim().min(3).max(120),
+  category: z.enum(manualNoteCategories).default('UMUM'),
+  content: z.string().trim().min(1).max(20000),
+});
+
+router.get('/notes', asyncHandler(async (req, res) => {
+  const search = req.query.search
+    ? z.string().trim().max(120).parse(String(req.query.search))
+    : '';
+  const category = req.query.category
+    ? z.enum(manualNoteCategories).parse(String(req.query.category))
+    : undefined;
+  const where = {
+    ...(category ? { category } : {}),
+    ...(search ? {
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+      ],
+    } : {}),
+  };
+  const notes = await prisma.manualNote.findMany({
+    where,
+    include: { createdBy: { select: { id: true, username: true } } },
+    orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+    take: 500,
+  });
+  res.json({ notes });
+}));
+
+router.post('/notes', asyncHandler(async (req, res) => {
+  const data = manualNoteSchema.parse(req.body);
+  const note = await prisma.$transaction(async (tx) => {
+    const created = await tx.manualNote.create({
+      data: { ...data, createdById: req.user.id },
+      include: { createdBy: { select: { id: true, username: true } } },
+    });
+    await tx.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'MANUAL_NOTE_CREATED',
+        detail: `Membuat catatan "${created.title}" [${created.category}].`,
+      },
+    });
+    return created;
+  });
+  res.status(201).json({ note });
+}));
+
+router.patch('/notes/:id', asyncHandler(async (req, res) => {
+  const data = manualNoteSchema.partial().parse(req.body);
+  if (!Object.keys(data).length) throw new HttpError(400, 'Tidak ada perubahan catatan yang dikirim.');
+  const note = await prisma.$transaction(async (tx) => {
+    const current = await tx.manualNote.findUnique({ where: { id: req.params.id } });
+    if (!current) throw new HttpError(404, 'Catatan tidak ditemukan.');
+    const updated = await tx.manualNote.update({
+      where: { id: current.id },
+      data,
+      include: { createdBy: { select: { id: true, username: true } } },
+    });
+    await tx.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'MANUAL_NOTE_UPDATED',
+        detail: `Memperbarui catatan "${current.title}" menjadi "${updated.title}".`,
+      },
+    });
+    return updated;
+  });
+  res.json({ note });
+}));
+
+router.delete('/notes/:id', asyncHandler(async (req, res) => {
+  const deleted = await prisma.$transaction(async (tx) => {
+    const current = await tx.manualNote.findUnique({ where: { id: req.params.id } });
+    if (!current) throw new HttpError(404, 'Catatan tidak ditemukan.');
+    await tx.manualNote.delete({ where: { id: current.id } });
+    await tx.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'MANUAL_NOTE_DELETED',
+        detail: `Menghapus catatan "${current.title}" [${current.category}].`,
+      },
+    });
+    return current;
+  });
+  res.json({ ok: true, deletedId: deleted.id });
+}));
+
 router.get('/activity', asyncHandler(async (_req, res) => {
   const logs = await prisma.activityLog.findMany({ include: { user: { select: { username: true } } }, orderBy: { createdAt: 'desc' }, take: 100 });
   res.json({ logs });
