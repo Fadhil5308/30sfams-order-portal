@@ -51,7 +51,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     });
     await notifyAdmins(tx, {
       type: 'ACCOUNT_REGISTRATION', title: 'Pendaftaran anggota baru',
-      message: `${created.username} (${created.email}) mendaftar dan menunggu persetujuan admin.`,
+      message: `${created.username} (${created.email}) registered and is awaiting administrator approval.`,
     });
     await tx.activityLog.create({ data: {
       userId: created.id, action: 'USER_REGISTRATION_PENDING',
@@ -62,7 +62,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   void sendDiscordNotification({ title: 'Pendaftaran anggota baru', description: `Anggota **${user.username}** mendaftar ke portal 30sFams dan menunggu persetujuan admin.`, color: 0xD97706 });
   res.status(201).json({
     user,
-    message: 'Pendaftaran berhasil diterima. Akun kamu menunggu persetujuan admin 30sFams. Kamu dapat login setelah akun disetujui.',
+    message: 'Registration received. Your account is awaiting approval by a 30sFams administrator. You can sign in once approved.',
   });
 }));
 
@@ -73,9 +73,9 @@ router.post('/login', asyncHandler(async (req, res) => {
     where: { deletedAt: null, OR: [{ email: identifier.toLowerCase() }, { username: identifier }] },
   });
   if (!user || !(await bcrypt.compare(data.password, user.passwordHash))) throw new HttpError(401, 'Incorrect username/email or password.');
-  if (user.registrationStatus === 'PENDING') throw new HttpError(403, 'Pendaftaran kamu masih menunggu persetujuan admin 30sFams.');
-  if (user.registrationStatus === 'REJECTED') throw new HttpError(403, 'Pendaftaran akun belum disetujui. Hubungi admin 30sFams untuk informasi lebih lanjut.');
-  if (!user.isActive) throw new HttpError(403, 'Akun kamu sedang dinonaktifkan. Hubungi admin 30sFams.');
+  if (user.registrationStatus === 'PENDING') throw new HttpError(403, 'Your registration is awaiting approval by a 30sFams administrator.');
+  if (user.registrationStatus === 'REJECTED') throw new HttpError(403, 'Your account registration has not been approved. Contact a 30sFams administrator for more information.');
+  if (!user.isActive) throw new HttpError(403, 'Your account is deactivated. Contact a 30sFams administrator.');
   setSession(res, user);
   res.json({ user: { id: user.id, username: user.username, email: user.email, role: user.role } });
 }));
@@ -87,7 +87,7 @@ router.post('/change-password', requireAuth, asyncHandler(async (req, res) => {
     newPassword: z.string().min(12, 'Password baru minimal 12 karakter.').max(100),
   }).parse(req.body ?? {});
   const account = await prisma.user.findUnique({ where: { id: req.user.id }, select: { passwordHash: true, sessionVersion: true } });
-  if (!account) throw new HttpError(404, 'Akun tidak ditemukan.');
+  if (!account) throw new HttpError(404, 'Account not found.');
   const currentMatches = await bcrypt.compare(data.currentPassword, account.passwordHash);
   if (!currentMatches) throw new HttpError(400, 'Current password is incorrect.');
   if (await bcrypt.compare(data.newPassword, account.passwordHash)) throw new HttpError(400, 'Password baru harus berbeda dari password saat ini.');
