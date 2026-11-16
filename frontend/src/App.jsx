@@ -114,11 +114,11 @@ function AuthScreen({ onAuthenticated, setNotice }) {
 function NotificationCenter({ notifications, unreadCount, onReadAll, onSelect }) {
   const [open, setOpen] = useState(false);
   return <div className="notification-center">
-    <button className="icon-button notification-button" title="Notifikasi" aria-label="Notifikasi" onClick={() => setOpen((value) => !value)}>
+    <button className="icon-button notification-button" title="Notifications" aria-label="Notifications" onClick={() => setOpen((value) => !value)}>
       <Bell size={18} />{unreadCount > 0 && <span className="notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </button>
     {open && <div className="notification-dropdown">
-      <div className="notification-dropdown-header"><div><strong>Notifikasi</strong><small>{unreadCount} unread</small></div><button className="text-button" disabled={!unreadCount} onClick={onReadAll}><CheckCheck size={14} /> Mark all as read</button></div>
+      <div className="notification-dropdown-header"><div><strong>Notifications</strong><small>{unreadCount} unread</small></div><button className="text-button" disabled={!unreadCount} onClick={onReadAll}><CheckCheck size={14} /> Mark all as read</button></div>
       <div className="notification-list">
         {notifications.length ? notifications.map((item) => <button key={item.id} className={`notification-item ${item.isRead ? 'read' : 'unread'}`} onClick={() => { onSelect(item); setOpen(false); }}>
           <span className={`notification-item-icon ${item.type.toLowerCase()}`}><Bell size={15} /></span>
@@ -144,7 +144,7 @@ function ChangePasswordModal({ onClose, onSubmit, busy }) {
       <form className="form-stack change-password-form" onSubmit={submit}>
         <label>Current password<input required type="password" autoComplete="current-password" value={draft.currentPassword} onChange={(event) => setDraft({ ...draft, currentPassword: event.target.value })}/></label>
         <label>New password<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.newPassword} onChange={(event) => setDraft({ ...draft, newPassword: event.target.value })}/></label>
-        <label>Confirm password baru<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.confirmPassword} onChange={(event) => setDraft({ ...draft, confirmPassword: event.target.value })}/></label>
+        <label>Confirm new password<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.confirmPassword} onChange={(event) => setDraft({ ...draft, confirmPassword: event.target.value })}/></label>
         {draft.confirmPassword && draft.newPassword !== draft.confirmPassword && <small className="password-mismatch">Password confirmation does not match.</small>}
         <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose}>Cancel</button><button className="button button-primary" disabled={busy || draft.newPassword !== draft.confirmPassword || draft.newPassword.length < 12}><KeyRound size={15}/> Save password</button></div>
       </form>
@@ -823,7 +823,7 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
         <div className="panel-subheading cash-history-heading"><div><h4>Income & Expense History</h4><small>Purchase income is recorded automatically when an order is marked Completed.</small></div><div className="header-actions"><div className="filter-select compact"><select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value)}><option value="ALL">All</option><option value="IN">Income</option><option value="OUT">Expenses</option></select><ChevronDown size={14}/></div><button type="button" className="button button-outline button-small" onClick={() => exportCashEntries(visibleCashEntries)} disabled={!visibleCashEntries.length}><ArrowDownToLine size={14}/> Export CSV</button></div></div>
         {visibleCashEntries.length ? <div className="cash-ledger-list">{visibleCashRows.map((entry) => {
           const positive = ['OPENING_BALANCE', 'ORDER_INCOME', 'ADJUSTMENT_IN'].includes(entry.type);
-          return <div className="cash-ledger-row" key={entry.id}><div className={`cash-ledger-icon ${positive ? 'income' : 'expense'}`}>{positive ? <ArrowUpRight size={16}/> : <ArrowDownToLine size={16}/>}</div><div className="cash-ledger-main"><strong>{cashEntryLabel(entry)}</strong><span>{entry.description}</span><small>{{ Operasional: "Operations", "Pemasukan manual": "Manual income", "Setoran anggota": "Member contribution", Donasi: "Donation", "Pemasukan lain": "Other income", "Manual income": "Manual income", "Member contribution": "Member contribution", Donation: "Donation", "Other income": "Other income", Perlengkapan: "Supplies", Transportasi: "Transportation", Lainnya: "Other" }[entry.category] || entry.category}{entry.order?.orderNumber ? ` · ${entry.order.orderNumber} · ${entry.order.user?.username || ''}` : ''}</small><small>{dateTime(entry.createdAt)} · {entry.createdBy?.username || 'System'}</small></div><strong className={positive ? 'cash-positive' : 'cash-negative'}>{positive ? '+' : '−'}{money(entry.amount)}</strong></div>;
+          return <div className="cash-ledger-row" key={entry.id}><div className={`cash-ledger-icon ${positive ? 'income' : 'expense'}`}>{positive ? <ArrowUpRight size={16}/> : <ArrowDownToLine size={16}/>}</div><div className="cash-ledger-main"><strong>{cashEntryLabel(entry)}</strong><span>{entry.description}</span><small>{{ Operasional: "Operations", "Pemasukan manual": "Manual income", "Setoran anggota": "Member contribution", Donasi: "Donation", "Pemasukan lain": "Other income", Perlengkapan: "Supplies", Transportasi: "Transportation", Lainnya: "Other", OPERASIONAL: "Operations", PEMASUKAN: "Income", PENGELUARAN: "Expense" }[entry.category] || entry.category}{entry.order?.orderNumber ? ` · ${entry.order.orderNumber} · ${entry.order.user?.username || ''}` : ''}</small><small>{dateTime(entry.createdAt)} · {entry.createdBy?.username || 'System'}</small></div><strong className={positive ? 'cash-positive' : 'cash-negative'}>{positive ? '+' : '−'}{money(entry.amount)}</strong></div>;
         })}</div> : <EmptyState icon={Wallet} title="No Records" detail={ledgerFilter === 'ALL' ? 'Set an opening balance to start tracking gang income and expenses.' : 'No transactions match this filter.'} />}
         {visibleCashEntries.length > cashPageSize && <DataPagination page={safeCashPage} pageSize={cashPageSize} total={visibleCashEntries.length} onPageChange={setCashPage} />}
       </section>
@@ -1051,7 +1051,7 @@ const adminNav = [
   { key: 'finance', label: 'Finance & Gang Fund', icon: Wallet, group: 'INSIGHTS' },
   { key: 'users', label: 'Members', icon: Users, group: 'INSIGHTS' },
   { key: 'member-stats', label: 'Member Statistics', icon: ChartNoAxesCombined, group: 'INSIGHTS' },
-  { key: 'activity', label: 'Activity admin', icon: Activity, group: 'INSIGHTS' },
+  { key: 'activity', label: 'Admin Activity', icon: Activity, group: 'INSIGHTS' },
 ];
 const userNav = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'MAIN MENU' },
@@ -1761,7 +1761,7 @@ ${approved} Approved orders will return reserved stock to available stock. Compl
     finally { setBusy(false); }
   }
 
-  if (booting) return <div className="boot-screen"><BrandLogo className="boot-brand-logo" /><span>Menyiapkan 30sFams Order Portal...</span></div>;
+  if (booting) return <div className="boot-screen"><BrandLogo className="boot-brand-logo" /><span>Loading 30sFams Order Portal...</span></div>;
   if (!user) return <><AuthScreen onAuthenticated={(account) => { setUser(account); setPage('dashboard'); }} setNotice={setNoticeSafe} /><Notice notice={notice} clear={() => setNotice(null)} /></>;
 
   return <div className="app-shell">
