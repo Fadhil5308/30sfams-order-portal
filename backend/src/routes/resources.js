@@ -143,7 +143,7 @@ router.get('/stash', requireAdmin, asyncHandler(async (req, res) => {
   const resources = await prisma.resource.findMany({
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
-  res.json({ resources: serializeResourcesWithImages(resources) });
+  res.json({ resources: await serializeResourcesWithImages(resources) });
 }));
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -174,7 +174,7 @@ router.get('/', asyncHandler(async (req, res) => {
   // Filtering in application code also keeps existing databases compatible
   // until the additive OTHER enum migration has been applied.
   const visibleResources = resources.filter((resource) => resource.category !== 'OTHER');
-  res.json({ resources: serializeResourcesWithImages(visibleResources) });
+  res.json({ resources: await serializeResourcesWithImages(visibleResources) });
 }));
 
 router.post('/', requireAdmin, asyncHandler(async (req, res) => {
