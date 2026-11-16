@@ -309,16 +309,19 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
   const [orderNotes, setOrderNotes] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 18;
-  const filtered = resources.filter((resource) => {
+  const filtered = useMemo(() => resources.filter((resource) => {
     const matchCategory = category === 'ALL' || resource.category === category;
     const matchSearch = `${resource.name} ${resource.sku} ${resource.description}`.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch && (!favoriteOnly || favoriteIds.includes(resource.id));
-  });
-  const visibleResources = filtered.slice((page - 1) * pageSize, page * pageSize);
+  }), [resources, category, search, favoriteOnly, favoriteIds]);
+  const visibleResources = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page]
+  );
   useEffect(() => setPage(1), [search, category, resources, favoriteIds, favoriteOnly]);
-  const cartItems = resources.filter((resource) => cart[resource.id] > 0);
-  const cartQty = cartItems.reduce((sum, resource) => sum + cart[resource.id], 0);
-  const cartTotal = cartItems.reduce((sum, resource) => sum + cart[resource.id] * resource.unitPrice, 0);
+  const cartItems = useMemo(() => resources.filter((resource) => cart[resource.id] > 0), [resources, cart]);
+  const cartQty = useMemo(() => cartItems.reduce((sum, resource) => sum + cart[resource.id], 0), [cartItems, cart]);
+  const cartTotal = useMemo(() => cartItems.reduce((sum, resource) => sum + cart[resource.id] * resource.unitPrice, 0), [cartItems, cart]);
   function changeCart(id, delta, available) {
     setCart((current) => {
       const next = { ...current };
@@ -456,7 +459,7 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
     }
   }
   const normalizedSearch = search.trim().toLowerCase();
-  const shown = resources.filter((resource) => {
+  const shown = useMemo(() => resources.filter((resource) => {
     const available = Number(resource.stockAvailable || 0);
     const minimum = Number(resource.minStock || 0);
     const isLow = resource.isActive && (available <= 0 || (minimum > 0 && available <= minimum));
@@ -467,8 +470,11 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
       || (statusFilter === 'LOW' && isLow);
     const matchesSearch = `${resource.name} ${resource.sku} ${resource.description || ''}`.toLowerCase().includes(normalizedSearch);
     return matchesCategory && matchesStatus && matchesSearch;
-  });
-  const visibleResources = shown.slice((page - 1) * pageSize, page * pageSize);
+  }), [resources, filter, statusFilter, normalizedSearch]);
+  const visibleResources = useMemo(
+    () => shown.slice((page - 1) * pageSize, page * pageSize),
+    [shown, page]
+  );
   useEffect(() => setPage(1), [filter, statusFilter, search, resources]);
   return <>
     <SectionHeader eyebrow="INVENTORY CONTROL" title="Manajemen stok" description="Tambah resource, perbarui harga, dan catat setiap perubahan inventory." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Tambah resource</button>} />
@@ -501,12 +507,15 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
   const totalAvailable = resources.reduce((sum, item) => sum + Number(item.stockAvailable || 0), 0);
   const totalReserved = resources.reduce((sum, item) => sum + Number(item.stockReserved || 0), 0);
   const totalStock = resources.reduce((sum, item) => sum + Number(item.stockTotal ?? (Number(item.stockAvailable || 0) + Number(item.stockReserved || 0))), 0);
-  const filtered = resources.filter((resource) => {
+  const filtered = useMemo(() => resources.filter((resource) => {
     const matchesCategory = filter === 'ALL' || resource.category === filter;
     const matchesSearch = `${resource.name} ${resource.sku} ${resource.description || ''}`.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
-  });
-  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+  }), [resources, filter, search]);
+  const visible = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page]
+  );
 
   useEffect(() => setPage(1), [search, filter, resources]);
 
