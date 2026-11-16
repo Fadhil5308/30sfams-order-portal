@@ -58,6 +58,30 @@ const objectStorageEnabled = Boolean(
   process.env.AWS_BUCKET_NAME
 );
 
+const objectStorageImagePrefix = '/api/resources/images/';
+
+// Convert private object keys to signed URLs inside the resource API response.
+// This avoids one extra Vercel Function invocation and redirect for every image.
+async function serializeResourceWithImage(resource) {
+  const serialized = serializeResource(resource);
+  if (!objectStorageEnabled || !resource.imageUrl?.startsWith(objectStorageImagePrefix)) {
+    return serialized;
+  }
+
+  const key = resource.imageUrl.slice(objectStorageImagePrefix.length);
+  try {
+    serialized.imageUrl = await getImageUrl(key);
+  } catch (error) {
+    // Keep the authenticated image endpoint as a fallback if URL signing fails.
+    console.error('Could not generate a signed resource image URL:', error);
+  }
+  return serialized;
+}
+
+async function serializeResourcesWithImages(resources) {
+  return Promise.all(resources.map(serializeResourceWithImage));
+}
+
 function storedImagePath(imageUrl) {
   if (!imageUrl || !imageUrl.startsWith('/uploads/')) return null;
 
@@ -119,7 +143,7 @@ router.get('/stash', requireAdmin, asyncHandler(async (req, res) => {
   const resources = await prisma.resource.findMany({
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
-  res.json({ resources: resources.map(serializeResource) });
+  res.json({ resources: serializeResourcesWithImages(resources) });
 }));
 
 router.get('/', asyncHandler(async (req, res) => {
@@ -150,7 +174,7 @@ router.get('/', asyncHandler(async (req, res) => {
   // Filtering in application code also keeps existing databases compatible
   // until the additive OTHER enum migration has been applied.
   const visibleResources = resources.filter((resource) => resource.category !== 'OTHER');
-  res.json({ resources: visibleResources.map(serializeResource) });
+  res.json({ resources: serializeResourcesWithImages(visibleResources) });
 }));
 
 router.post('/', requireAdmin, asyncHandler(async (req, res) => {
@@ -170,7 +194,7 @@ router.post('/', requireAdmin, asyncHandler(async (req, res) => {
     return created;
   });
   void sendDiscordNotification({ title: resource.category === 'OTHER' ? 'Item Stash baru' : 'Resource inventory baru', description: resource.category === 'OTHER' ? `Item **${resource.name}** (${resource.sku}) ditambahkan ke Stash dan tidak tersedia di katalog pemesanan.` : `Resource **${resource.name}** (${resource.sku}) ditambahkan ke katalog 30sFams.` });
-  res.status(201).json({ resource: serializeResource(resource) });
+  res.status(201).json({ resource: await serializeResourceWithImage(resource) });
 }));
 
 // Admin dapat mengunggah atau mengganti gambar resource yang sudah ada.
@@ -220,7 +244,7 @@ if (objectStorageEnabled) {
   }
 
   await removeStoredImage(current.imageUrl);
-  res.json({ resource: serializeResource(updated) });
+  res.json({ resource: await serializeResourceWithImage(updated) });
 }));
 
 // Admin dapat menghapus gambar dan kembali ke ikon bawaan.
@@ -288,7 +312,7 @@ router.patch('/:id/stock', requireAdmin, asyncHandler(async (req, res) => {
     return { resource: updated, name: current.name, sku: current.sku, unit: current.unit };
   }, { isolationLevel: 'Serializable' });
   void sendDiscordNotification({ title: data.delta > 0 ? 'Stok resource ditambah' : 'Stok resource disesuaikan', description: `**${result.name}** (${result.sku}): ${data.delta > 0 ? '+' : ''}${data.delta} ${result.unit}. Alasan: ${data.note}`, color: data.delta > 0 ? 0x16A34A : 0xD97706 });
-  res.json({ resource: serializeResource(result.resource) });
+  res.json({ resource: await serializeResourceWithImage(result.resource) });
 }));
 
 router.get('/:id/movements', requireAdmin, asyncHandler(async (req, res) => {
