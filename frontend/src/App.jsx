@@ -4,7 +4,7 @@ import {
   Check, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardList, Clock3,
   Command, Database, FileText, History, LayoutDashboard, LogOut, Menu, Package,
   PackagePlus, Printer, Search, ShieldCheck, ShoppingCart, SlidersHorizontal,
-  Sparkles, Trash2, Truck, Upload, UserRound, Users, UserPlus, UserX, CheckCheck, KeyRound, X, XCircle, RotateCcw, Wallet, CalendarDays, Star, Repeat,
+  Sparkles, Trash2, Truck, Upload, UserRound, Users, UserPlus, UserX, CheckCheck, KeyRound, Pencil, X, XCircle, RotateCcw, Wallet, CalendarDays, Star, Repeat,
 } from 'lucide-react';
 import { api, assetUrl, categoryLabel, dateTime, money, number, statusLabel, uploadFile } from './api';
 
@@ -147,6 +147,53 @@ function ChangePasswordModal({ onClose, onSubmit, busy }) {
         <label>Konfirmasi password baru<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.confirmPassword} onChange={(event) => setDraft({ ...draft, confirmPassword: event.target.value })}/></label>
         {draft.confirmPassword && draft.newPassword !== draft.confirmPassword && <small className="password-mismatch">Konfirmasi password belum sama.</small>}
         <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose}>Batal</button><button className="button button-primary" disabled={busy || draft.newPassword !== draft.confirmPassword || draft.newPassword.length < 12}><KeyRound size={15}/> Simpan password</button></div>
+      </form>
+    </section>
+  </div>;
+}
+
+function EditResourceModal({ resource, onClose, onSave, busy }) {
+  const [draft, setDraft] = useState({
+    name: resource.name || '',
+    sku: resource.sku || '',
+    category: resource.category || 'CLASS1',
+    unit: resource.unit || 'unit',
+    unitPrice: String(resource.unitPrice ?? 0),
+    description: resource.description || '',
+  });
+
+  async function submit(event) {
+    event.preventDefault();
+    const price = Number(draft.unitPrice);
+    if (!Number.isFinite(price) || price < 0) return;
+    const saved = await onSave(resource.id, {
+      name: draft.name.trim(),
+      sku: draft.sku.trim().toUpperCase(),
+      category: draft.category,
+      unit: draft.unit.trim(),
+      unitPrice: price,
+      description: draft.description,
+    });
+    if (saved) onClose();
+  }
+
+  return <div className="order-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+    <section className="change-password-modal edit-resource-modal" role="dialog" aria-modal="true" aria-labelledby="edit-resource-title">
+      <div className="panel-heading">
+        <div><span className="section-kicker">INVENTORY CONTROL</span><h3 id="edit-resource-title">Edit data resource</h3><p>Perbarui informasi <strong>{resource.name}</strong>. Perubahan ini tidak mengubah stok tersedia atau stok yang dicadangkan.</p></div>
+        <button type="button" className="icon-button" onClick={onClose} disabled={busy} aria-label="Tutup"><X size={18}/></button>
+      </div>
+      <form className="form-stack change-password-form" onSubmit={submit}>
+        <div className="form-grid edit-resource-grid">
+          <label>Nama resource<input required minLength={2} maxLength={100} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Nama resource" /></label>
+          <label>SKU / kode unik<input required minLength={2} maxLength={40} pattern="[A-Za-z0-9_-]+" value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value.toUpperCase() })} placeholder="WPN-001" /></label>
+          <label>Kategori<select required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{CATEGORIES.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select></label>
+          <label>Satuan<input required maxLength={24} value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} placeholder="unit / pcs / pack" /></label>
+          <label>Harga per satuan (USD)<input required type="number" min="0" max="1000000000" step="0.01" value={draft.unitPrice} onChange={(event) => setDraft({ ...draft, unitPrice: event.target.value })} /></label>
+          <label className="span-two">Deskripsi<input maxLength={500} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Deskripsi singkat resource" /></label>
+        </div>
+        <div className="edit-resource-note"><ShieldCheck size={15}/><span>Jumlah stok hanya dapat diubah melalui tombol <strong>Atur stok</strong> agar perubahannya masuk ke riwayat inventory.</span></div>
+        <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose} disabled={busy}>Batal</button><button className="button button-primary" disabled={busy || !draft.name.trim() || !draft.sku.trim() || !draft.unit.trim() || !Number.isFinite(Number(draft.unitPrice)) || Number(draft.unitPrice) < 0}><Check size={15}/> {busy ? 'Menyimpan...' : 'Simpan perubahan'}</button></div>
       </form>
     </section>
   </div>;
@@ -370,7 +417,7 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
     <SectionHeader eyebrow="INVENTORY CONTROL" title="Manajemen stok" description="Tambah resource, perbarui harga, dan catat setiap perubahan inventory." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Tambah resource</button>} />
     {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>Resource baru</h3><p>Resource akan muncul di katalog dan dapat dipesan sesuai stok yang tersedia.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Nama resource<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contoh: WEAPON_PISTOL" /></label><label>SKU / kode unik<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Kategori<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Satuan<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Harga per satuan (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Stok awal<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label className="span-two">Deskripsi<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Deskripsi singkat resource" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}>Simpan resource</button></div></form>}
     <div className="panel"><div className="panel-heading"><div><h3>Daftar inventory</h3><p>{number(resources.length)} item terdaftar</p></div><div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(e) => setFilter(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select><ChevronDown size={14} /></div></div>
-      {shown.length ? <><div className="table-wrap"><table><thead><tr><th>Resource</th><th>Kategori</th><th>Harga / unit</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Total stok</th><th>Status</th><th>Kelola</th></tr></thead><tbody>{visibleResources.map((resource) => <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Ganti gambar' : 'Upload gambar'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Hapus gambar"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Atur stok</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Ubah harga"><SlidersHorizontal size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Nonaktifkan' : 'Aktifkan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={shown.length} onPageChange={setPage} /></> : <EmptyState title="Kategori kosong" detail="Belum ada resource dalam kategori ini." />}
+      {shown.length ? <><div className="table-wrap"><table><thead><tr><th>Resource</th><th>Kategori</th><th>Harga / unit</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Total stok</th><th>Status</th><th>Kelola</th></tr></thead><tbody>{visibleResources.map((resource) => <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Ganti gambar' : 'Upload gambar'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Hapus gambar"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Atur stok</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Edit data resource"><Pencil size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Nonaktifkan' : 'Aktifkan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={shown.length} onPageChange={setPage} /></> : <EmptyState title="Kategori kosong" detail="Belum ada resource dalam kategori ini." />}
     </div>
   </>;
 }
@@ -875,6 +922,7 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
   const isAdmin = user?.role === 'ADMIN';
   const pageCacheRef = useRef({});
   const pageRequestsRef = useRef({});
@@ -1436,15 +1484,24 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
     finally { setBusy(false); }
   }
 
-  async function editResource(resource) {
-    const priceText = window.prompt(`Harga per ${resource.unit} (USD):`, String(resource.unitPrice));
-    if (priceText === null) return;
-    const price = Number(priceText);
-    if (!Number.isFinite(price) || price < 0) { setNoticeSafe({ type: 'error', message: 'Harga tidak valid.' }); return; }
+  function editResource(resource) {
+    setEditingResource(resource);
+  }
+
+  async function saveResourceEdits(resourceId, changes) {
     setBusy(true);
-    try { await api(`/resources/${resource.id}`, { method: 'PATCH', body: JSON.stringify({ unitPrice: price }) }); await refresh(); setNoticeSafe({ type: 'success', message: 'Harga resource diperbarui.' }); }
-    catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
-    finally { setBusy(false); }
+    try {
+      await api(`/resources/${resourceId}`, { method: 'PATCH', body: JSON.stringify(changes) });
+      await refresh();
+      setEditingResource(null);
+      setNoticeSafe({ type: 'success', message: 'Data resource berhasil diperbarui.' });
+      return true;
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+      return false;
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function updateResourceImage(resource, file) {
@@ -1516,6 +1573,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
       {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Memuat detail pesanan...</section></div>}
       <OrderDetailModal order={selectedOrder} isAdmin={isAdmin} onClose={() => setSelectedOrder(null)} onPrint={printSelectedOrder} />
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} onSubmit={changePassword} busy={busy} />}
+      {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onSave={saveResourceEdits} busy={busy} />}
       <footer className="main-footer"><span>© {new Date().getFullYear()} 30sFams</span><span>30sFams Resource Orders <i /> Private workspace</span></footer>
     </main>
   </div>;
