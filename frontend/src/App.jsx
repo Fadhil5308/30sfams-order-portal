@@ -1300,6 +1300,38 @@ export default function App() {
     setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setAdminMyOrders([]); setArchivedOrders([]); setManualNotes([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
   }
 
+  async function saveManualNote(data, noteId = null) {
+    setBusy(true);
+    try {
+      const result = await api(noteId ? `/admin/notes/${noteId}` : '/admin/notes', {
+        method: noteId ? 'PATCH' : 'POST',
+        body: JSON.stringify(data),
+      });
+      await refresh();
+      setNoticeSafe({ type: 'success', message: noteId ? 'Catatan berhasil diperbarui.' : 'Catatan berhasil disimpan.' });
+      return Boolean(result.note);
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteManualNote(note) {
+    if (!window.confirm(`Hapus catatan "${note.title}"? Catatan yang dihapus tidak dapat dikembalikan.`)) return;
+    setBusy(true);
+    try {
+      await api(`/admin/notes/${note.id}`, { method: 'DELETE' });
+      await refresh();
+      setNoticeSafe({ type: 'success', message: 'Catatan berhasil dihapus.' });
+    } catch (error) {
+      setNoticeSafe({ type: 'error', message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createUser(data) {
     setBusy(true);
     try {
