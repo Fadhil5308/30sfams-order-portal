@@ -93,7 +93,7 @@ function AuthScreen({ onAuthenticated, setNotice }) {
       <div className="auth-form-wrap">
         <div className="auth-heading"><span className="section-kicker">{mode === 'login' ? 'WELCOME BACK' : 'JOIN 30SFAMS'}</span><h2>{mode === 'login' ? 'Sign in to your account' : 'Create a member account'}</h2><p>{mode === 'login' ? 'Enter your username or email and password.' : 'Create a member account. Your account will be activated after approval by a 30sFams admin.'}</p></div>
         {mode === 'login' ? <form onSubmit={submitLogin} className="form-stack">
-          <label>Username atau email<input required value={loginForm.identifier} onChange={(event) => setLoginForm({ ...loginForm, identifier: event.target.value })} placeholder="Enter your username or email" autoComplete="username" /></label>
+          <label>Username or email<input required value={loginForm.identifier} onChange={(event) => setLoginForm({ ...loginForm, identifier: event.target.value })} placeholder="Enter your username or email" autoComplete="username" /></label>
           <label>Password<input required type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} placeholder="Enter your password" autoComplete="current-password" /></label>
           <button className="button button-primary button-full" disabled={busy}>{busy ? 'Processing...' : 'Sign in to dashboard'} <ArrowUpRight size={17} /></button>
         </form> : <form onSubmit={submitRegistration} className="form-stack">
@@ -266,7 +266,7 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
         <div className="panel"><div className="panel-heading"><div><h3>Recent orders</h3><p>Incoming resource requests</p></div><button className="text-button" onClick={() => goTo('admin-orders')}>View all <ArrowUpRight size={15} /></button></div>
           {recentOrders.slice(0, 5).length ? <div className="compact-list">{recentOrders.slice(0, 5).map((order) => <div className="compact-row" key={order.id || order.orderNumber}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'User'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="No orders yet" detail="Member orders will appear here." />}
         </div>
-        <div className="panel"><div className="panel-heading"><div><h3>Stock by category</h3><p>Current available stock</p></div><button className="icon-button" onClick={() => goTo('inventory')} aria-label="Buka inventory"><ArrowUpRight size={17} /></button></div>
+        <div className="panel"><div className="panel-heading"><div><h3>Stock by category</h3><p>Current available stock</p></div><button className="icon-button" onClick={() => goTo('inventory')} aria-label="Open inventory"><ArrowUpRight size={17} /></button></div>
           <div className="category-stock">{CATEGORIES.map((category, index) => { const qty = categoryValues[index]; return <div className="category-stock-row" key={category}><div><span>{categoryLabel(category)}</span><strong>{number(qty)}</strong></div><div className="progress-track"><span style={{ width: `${Math.max(3, qty / maxCategoryStock * 100)}%` }} /></div></div>; })}</div>
         </div>
       </div>
@@ -296,12 +296,12 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
     <SectionHeader eyebrow="PERSONAL OVERVIEW" title={`Welcome, ${user.username}`} description="A summary of your resources and account order activity." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date())}</div>} />
     <div className="stats-grid">
       <StatCard label="Available resources" value={number(resources.length)} detail="Item types in the catalog" icon={Boxes} tone="blue" />
-      <StatCard label="Pending orders" value={number(pending)} detail="Awaiting approval admin" icon={Clock3} tone="orange" />
+      <StatCard label="Pending orders" value={number(pending)} detail="Awaiting admin approval" icon={Clock3} tone="orange" />
       <StatCard label="Completed units purchased" value={number(completedQty)} detail="Total completed orders" icon={Package} tone="green" />
       <StatCard label="Total purchase value" value={money(completedAmount)} detail="Completed orders only" icon={CircleDollarSign} tone="purple" />
     </div>
     <div className="panel"><div className="panel-heading"><div><h3>Recent order history</h3><p>Order status for your account</p></div><button className="text-button" onClick={() => goTo('my-orders')}>View all <ArrowUpRight size={15} /></button></div>
-      {orders.slice(0, 6).length ? <div className="table-wrap"><table><thead><tr><th>Order number</th><th>Date</th><th>Quantity</th><th>Total amount</th><th>Status</th></tr></thead><tbody>{orders.slice(0, 6).map((order) => <tr key={order.id}><td className="strong-cell">{order.orderNumber}</td><td>{dateTime(order.createdAt)}</td><td>{number(order.totalQuantity)} unit</td><td>{money(order.totalAmount)}</td><td><StatusPill status={order.status} /></td></tr>)}</tbody></table></div> : <EmptyState icon={ShoppingCart} title="No transactions yet" detail="Choose a resource from the catalog to place your first order." />}
+      {orders.slice(0, 6).length ? <div className="table-wrap"><table><thead><tr><th>Order Number</th><th>Date</th><th>Quantity</th><th>Total Amount</th><th>Status</th></tr></thead><tbody>{orders.slice(0, 6).map((order) => <tr key={order.id}><td className="strong-cell">{order.orderNumber}</td><td>{dateTime(order.createdAt)}</td><td>{number(order.totalQuantity)} unit</td><td>{money(order.totalAmount)}</td><td><StatusPill status={order.status} /></td></tr>)}</tbody></table></div> : <EmptyState icon={ShoppingCart} title="No transactions yet" detail="Choose a resource from the catalog to place your first order." />}
     </div>
   </>;
 }
@@ -371,7 +371,7 @@ function DataPagination({ page, pageSize = 25, total, onPageChange }) {
   const firstItem = (page - 1) * pageSize + 1;
   const lastItem = Math.min(total, page * pageSize);
   return <div className="table-pagination">
-    <span>Showing {number(firstItem)}–{number(lastItem)} dari {number(total)}</span>
+    <span>Showing {number(firstItem)}–{number(lastItem)} of {number(total)}</span>
     <div>
       <button type="button" className="button button-small button-ghost" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</button>
       <span>Halaman {number(page)} / {number(totalPages)}</span>
@@ -387,7 +387,7 @@ function OrderTable({ orders, isAdmin, onAction, onDetails, onRestore, onReorder
   const pageOrders = safeOrders.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => setPage(1), [orders]);
   if (!safeOrders.length) return <EmptyState icon={ClipboardList} title="No order data yet" detail="Orders will appear on this page once a transaction has been placed." />;
-  return <><div className="table-wrap"><table><thead><tr>{isAdmin && <th>Ordered By</th>}<th>Order number</th><th>Date</th>{isArchived && <th>Diarsipkan</th>}<th>Resource</th><th>Quantity</th><th>Total amount</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
+  return <><div className="table-wrap"><table><thead><tr>{isAdmin && <th>Ordered By</th>}<th>Order Number</th><th>Date</th>{isArchived && <th>Archived</th>}<th>Resource</th><th>Quantity</th><th>Total Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
     {isAdmin && <td><div className="user-cell"><div className="avatar-mini">{(order.user?.username || 'U').slice(0, 1).toUpperCase()}</div>{order.user?.username || '-'}</div></td>}
     <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Note: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{(Array.isArray(order.items) ? order.items : []).map((item) => <span key={item.id || item.resourceId || item.resourceName}>{item.resourceName || 'Resource'}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
     <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetails(order)}><FileText size={13} /> Details</button>{isArchived && isAdmin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Restore</button>}{!readOnly && isAdmin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Approve"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Reject"><X size={15} /></button></>}{!readOnly && isAdmin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Confirm handover and complete"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Cancel and release stock"><X size={15} /></button></>}{!readOnly && !isAdmin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Cancel</button>}{!readOnly && !isAdmin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Reorder</button>}</div></td>
@@ -403,11 +403,11 @@ function OrderDetailsModal({ order, onClose, onPrint, isAdmin }) {
   }];
   return <div className="order-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
-      <div className="order-detail-toolbar no-print"><div><span className="section-kicker">30SFAMS · ORDER RECORD</span><h2>Order Detailss</h2></div><div className="modal-toolbar-actions"><button className="button button-outline" onClick={onPrint}><Printer size={15} /> Print / PDF</button><button className="icon-button" onClick={onClose} aria-label="Close details"><X size={19} /></button></div></div>
+      <div className="order-detail-toolbar no-print"><div><span className="section-kicker">30SFAMS · ORDER RECORD</span><h2>Order Details</h2></div><div className="modal-toolbar-actions"><button className="button button-outline" onClick={onPrint}><Printer size={15} /> Print / PDF</button><button className="icon-button" onClick={onClose} aria-label="Close details"><X size={19} /></button></div></div>
       <div className="invoice-sheet">
         <header className="invoice-brand-row"><div className="invoice-brand"><img src="/30s-logo.png" alt="30sFams"/><div><strong>30sFAMS</strong><span>RESOURCE ORDER PORTAL</span></div></div><div className="invoice-status"><span>ORDER STATUS</span><StatusPill status={order.status} /></div></header>
         <div className="invoice-title-row"><div><span className="section-kicker">ORDER DETAIL / INVOICE</span><h2 id="order-detail-title">{order.orderNumber}</h2><p>Created on {dateTime(order.createdAt)}</p></div><div className="invoice-meta"><span>Order number</span><strong>{order.orderNumber}</strong><span>Last updated</span><strong>{dateTime(order.updatedAt || order.createdAt)}</strong>{order.archivedAt && <><span>Archive date</span><strong>{dateTime(order.archivedAt)} · {order.archivedBy?.username || 'Admin'}</strong></>}</div></div>
-        <div className="invoice-customer-grid"><div><span className="invoice-label">PEMESAN</span><strong>{order.user?.username || 'Your account'}</strong>{isAdmin && <small>{order.user?.email || '-'}</small>}</div><div><span className="invoice-label">ITEM COUNT</span><strong>{number(order.totalQuantity)} unit</strong><small>{number(order.items?.length || 0)} resource types</small></div></div>
+        <div className="invoice-customer-grid"><div><span className="invoice-label">ORDERED BY</span><strong>{order.user?.username || 'Your account'}</strong>{isAdmin && <small>{order.user?.email || '-'}</small>}</div><div><span className="invoice-label">ITEM COUNT</span><strong>{number(order.totalQuantity)} unit</strong><small>{number(order.items?.length || 0)} resource types</small></div></div>
         <div className="invoice-section-title">Resource Detailss</div>
         <div className="table-wrap invoice-table-wrap"><table className="invoice-table"><thead><tr><th>Resource</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead><tbody>{order.items?.map((item) => <tr key={item.id}><td><strong>{item.resourceName}</strong></td><td>{categoryLabel(item.category)}</td><td>{number(item.quantity)} {item.unit}</td><td>{money(item.unitPrice)}</td><td className="strong-cell">{money(item.lineTotal)}</td></tr>)}</tbody></table></div>
         <div className="invoice-total-box"><div><span>Total Quantity</span><strong>{number(order.totalQuantity)} unit</strong></div><div className="invoice-grand-total"><span>Total amount</span><strong>{money(order.totalAmount)}</strong></div></div>
@@ -479,7 +479,7 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
   return <>
     <SectionHeader eyebrow="INVENTORY CONTROL" title="Inventory Management" description="Add resources, update prices, and track every inventory change." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Add Resource</button>} />
     {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>New Resource</h3><p>The resource will appear in the catalog and can be ordered based on available stock.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Resource name<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Example: WEAPON_PISTOL" /></label><label>SKU / unique code<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Category<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Unit<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Unit price (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Initial Stock<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label>Minimum stock threshold<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(e) => setDraft({ ...draft, minStock: e.target.value })} /><small className="field-hint">Enter 0 to disable the minimum threshold.</small></label><label className="span-two">Description<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Brief resource description" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Cancel</button><button className="button button-primary" disabled={busy}>Save Resource</button></div></form>}
-    <div className="panel"><div className="panel-heading"><div><h3>Inventory List</h3><p>{number(shown.length)} dari {number(resources.length)} items shown</p></div><div className="inventory-count">{number(shown.length)} hasil</div></div>
+    <div className="panel"><div className="panel-heading"><div><h3>Inventory List</h3><p>{number(shown.length)} of {number(resources.length)} items shown</p></div><div className="inventory-count">{number(shown.length)} results</div></div>
       <div className="catalog-toolbar inventory-toolbar">
         <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search resource name or SKU..." /></div>
         <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter by category"><option value="ALL">All categories</option>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select><ChevronDown size={14} /></div>
@@ -542,7 +542,7 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
       <StatCard label="Item Types" value={number(resources.length)} detail="All items registered in the stash" icon={Boxes} tone="blue" />
       <StatCard label="Total Stash Stock" value={number(totalStock)} detail="Available + reserved" icon={Package} tone="green" />
       <StatCard label="Available stock" value={number(totalAvailable)} detail="Stock not currently reserved" icon={PackagePlus} tone="purple" />
-      <StatCard label="Stock dicadangkan" value={number(totalReserved)} detail="Reserved for active orders" icon={ClipboardList} tone="orange" />
+      <StatCard label="Reserved Stock" value={number(totalReserved)} detail="Reserved for active orders" icon={ClipboardList} tone="orange" />
     </div>
     {showCreate && <form className="panel create-resource-form" onSubmit={createOtherItem}>
       <div className="panel-heading"><div><h3>New Stash-only Item</h3><p>The category is automatically set to Other. This item will not appear in catalog inventory management or the catalog/order page.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)} aria-label="Close"><X size={17} /></button></div>
@@ -600,7 +600,7 @@ function Reports({ reports }) {
       <StatCard label="Completed Amount" value={money(summary.completedAmount)} detail={`${number(summary.completedQuantity)} unit · Completed`} icon={CircleDollarSign} tone="green" />
       <StatCard label="Reserved Value" value={money(summary.reservedAmount)} detail={`${number(summary.reservedQuantity)} unit · Approved`} icon={Package} tone="blue" />
       <StatCard label="Pending Value" value={money(summary.pendingAmount)} detail={`${number(summary.pendingQuantity)} unit · Pending`} icon={Clock3} tone="orange" />
-      <StatCard label="Total Orders" value={number(summary.totalOrders)} detail={`${number(summary.totalUsers)} user · ${number(summary.activeResources)} resource aktif`} icon={ClipboardList} tone="purple" />
+      <StatCard label="Total Orders" value={number(summary.totalOrders)} detail={`${number(summary.totalUsers)} members · ${number(summary.activeResources)} active resources`} icon={ClipboardList} tone="purple" />
     </div>
     <div className="dashboard-grid reports-grid"><div className="panel"><div className="panel-heading"><div><h3>Sales by Category</h3><p>Completed orders only</p></div></div>{categories.length ? <div className="table-wrap"><table><thead><tr><th>Category</th><th>Quantity Sold</th><th>Nominal</th></tr></thead><tbody>{categories.map(([category, values]) => <tr key={category}><td className="strong-cell">{categoryLabel(category)}</td><td>{number(values.quantity)} unit</td><td>{money(values.amount)}</td></tr>)}</tbody></table></div> : <EmptyState title="No completed sales yet" detail="Category reports will appear once orders are completed." />}</div>
       <div className="panel"><div className="panel-heading"><div><h3>Top Resources</h3><p>Based on completed order quantities</p></div></div>{reports.topResources?.length ? <div className="compact-list">{reports.topResources.map((item, i) => <div className="compact-row" key={item.resourceId}><div className="rank-number">{String(i + 1).padStart(2, '0')}</div><div className="compact-main"><strong>{item.name}</strong><span>{number(item.quantity)} units sold</span></div><div className="compact-side"><strong>{money(item.amount)}</strong></div></div>)}</div> : <EmptyState title="No data yet" detail="Top resources will appear here." />}</div></div>
@@ -641,7 +641,7 @@ function UsersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChang
   function rankLabel(rank) { return MEMBER_RANKS.find((item) => item.value === rank)?.label || 'Hangaround'; }
   return <>
     <SectionHeader eyebrow="MEMBER MANAGEMENT" title="Members" description="Accounts, ranks, and access." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><UserPlus size={16} /> New member</button>} />
-    {users.some((user) => user.registrationStatus === 'PENDING') && <div className="notice warning"><Clock3 size={17}/><span>{number(users.filter((user) => user.registrationStatus === 'PENDING').length)} pendaftaran menunggu persetujuan.</span></div>}
+    {users.some((user) => user.registrationStatus === 'PENDING') && <div className="notice warning"><Clock3 size={17}/><span>{number(users.filter((user) => user.registrationStatus === 'PENDING').length)} registrations awaiting approval.</span></div>}
     {showCreate && <form className="panel create-resource-form" onSubmit={submit}>
       <div className="panel-heading"><div><h3>New member</h3><p>New accounts are activated immediately with the initial rank set to Hangaround.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div>
       <div className="form-grid user-create-grid">
@@ -758,7 +758,7 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
   return <>
     <SectionHeader eyebrow="FINANCE & GANG FUND" title="Finance & Gang Fund" description="This page is restricted to admins. Spending is calculated from Completed orders; the cash balance is calculated from the cash ledger." action={<div className="date-chip"><ShieldCheck size={15}/> Admin only</div>} />
     <div className="stats-grid finance-stats-grid">
-      <StatCard label="Lifetime Spending" value={money(lifetime.totalAmount)} detail={`${number(lifetime.completedOrders)} completed orders · ${number(lifetime.totalQuantity)} unit`} icon={ChartNoAxesCombined} tone="purple" />
+      <StatCard label="Lifetime Spending" value={money(lifetime.totalAmount)} detail={`${number(lifetime.completedOrders)} completed orders · ${number(lifetime.totalQuantity)} units`} icon={ChartNoAxesCombined} tone="purple" />
       <StatCard label="Current Period Spending" value={money(currentSummary.totalAmount)} detail={`${number(currentSummary.completedOrders)} completed orders`} icon={CalendarDays} tone="blue" />
       <StatCard label="Gang Fund Balance" value={money(cashSummary.balance)} detail="Current balance based on the cash ledger" icon={Wallet} tone="green" />
       <StatCard label="Total Gang Expenses" value={money(cashSummary.expenses)} detail="Expenses recorded by admins" icon={ArrowDownToLine} tone="orange" />
@@ -882,7 +882,7 @@ function StockMovementPage({ movements }) {
   return <>
     <SectionHeader eyebrow="INVENTORY AUDIT TRAIL" title="Stock Movement History" description="All restocks, adjustments, reservations, released reservations, and resource handovers are recorded here." action={<div className="header-actions"><div className="filter-select compact"><SlidersHorizontal size={15}/><select value={type} onChange={(event) => setType(event.target.value)}><option value="ALL">All Activities</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><ChevronDown size={14}/></div><button className="button button-outline button-small" onClick={exportMovements} disabled={!filtered.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
     <div className="panel"><div className="panel-heading"><div><h3>Stock Ledger</h3><p>{number(filtered.length)} latest records · maximum 200 records</p></div><History size={19}/></div>
-      {filtered.length ? <><div className="table-wrap"><table><thead><tr><th>Date & Time</th><th>Resource</th><th>Activity</th><th>Quantity</th><th>Order number</th><th>Performed By</th><th>Notes</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={History} title="No stock records yet" detail="Inventory activity is recorded when stock is created, adjusted, reserved, released, or handed over."/>}
+      {filtered.length ? <><div className="table-wrap"><table><thead><tr><th>Date & Time</th><th>Resource</th><th>Activity</th><th>Quantity</th><th>Order Number</th><th>Performed By</th><th>Notes</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={History} title="No stock records yet" detail="Inventory activity is recorded when stock is created, adjusted, reserved, released, or handed over."/>}
     </div>
   </>;
 }
@@ -901,7 +901,7 @@ function MemberStatsPage({ data }) {
   }
   return <>
     <SectionHeader eyebrow="MEMBER INSIGHTS" title="Member Statistics" description="Track each member’s ordering activity based on completed orders." action={<div className="header-actions"><div className="date-chip"><ShieldCheck size={15}/> Admin only</div><button className="button button-outline button-small" onClick={exportMembers} disabled={!members.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
-    <div className="stats-grid"><StatCard label="Total Members" value={number(summary.totalMembers)} detail={`${number(summary.activeMembers)} active accounts`} icon={Users} tone="blue"/><StatCard label="Awaiting Activation" value={number(summary.pendingRegistrations)} detail="New registrations" icon={Clock3} tone="orange"/><StatCard label="Completed Orders" value={number(summary.completedOrders)} detail={`${number(summary.completedQuantity)} unit`} icon={Package} tone="green"/><StatCard label="Total Spending" value={money(summary.completedAmount)} detail="All members combined" icon={CircleDollarSign} tone="purple"/></div>
+    <div className="stats-grid"><StatCard label="Total Members" value={number(summary.totalMembers)} detail={`${number(summary.activeMembers)} active accounts`} icon={Users} tone="blue"/><StatCard label="Awaiting Activation" value={number(summary.pendingRegistrations)} detail="New registrations" icon={Clock3} tone="orange"/><StatCard label="Completed Orders" value={number(summary.completedOrders)} detail={`${number(summary.completedQuantity)} units`} icon={Package} tone="green"/><StatCard label="Total Spending" value={money(summary.completedAmount)} detail="All members combined" icon={CircleDollarSign} tone="purple"/></div>
     <div className="panel"><div className="panel-heading"><div><h3>Member Purchase Activity</h3><p>Sorted by highest completed spending.</p></div><Users size={19}/></div>
       {members.length ? <><div className="table-wrap"><table><thead><tr><th>Member</th><th>Account Status</th><th>Completed Orders</th><th>Total Quantity</th><th>Total Spending</th><th>Active Orders</th><th>Last Purchase</th></tr></thead><tbody>{visibleMembers.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${!member.deletedAt && member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.deletedAt ? 'Deleted' : member.registrationStatus === 'PENDING' ? 'Pending' : member.registrationStatus === 'REJECTED' ? 'Rejected' : member.isActive ? 'Active' : 'Inactive'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'None yet'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={members.length} onPageChange={setPage} /></> : <EmptyState icon={Users} title="No members yet" detail="Registered members will appear here."/>}
     </div>
@@ -1040,7 +1040,7 @@ function ActivityPage({ logs, discordStatus, onTestDiscord, busy }) {
 const adminNav = [
   { key: 'dashboard', label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
   { key: 'catalog', label: 'Catalog & Orders', icon: ShoppingCart, group: 'WORKSPACE' },
-  { key: 'my-orders', label: 'Orders saya', icon: ClipboardList, group: 'WORKSPACE' },
+  { key: 'my-orders', label: 'My Orders', icon: ClipboardList, group: 'WORKSPACE' },
   { key: 'inventory', label: 'Inventory Management', icon: Boxes, group: 'WORKSPACE' },
   { key: 'stash', label: 'Stash', icon: Archive, group: 'WORKSPACE' },
   { key: 'stock-history', label: 'Stock History', icon: History, group: 'WORKSPACE' },
@@ -1057,7 +1057,7 @@ const userNav = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'MAIN MENU' },
   { key: 'catalog', label: 'Resource Catalog', icon: Boxes, group: 'MAIN MENU' },
   { key: 'favorites', label: 'Favorite Resources', icon: Star, group: 'MAIN MENU' },
-  { key: 'my-orders', label: 'Orders saya', icon: ClipboardList, group: 'MAIN MENU' },
+  { key: 'my-orders', label: 'My Orders', icon: ClipboardList, group: 'MAIN MENU' },
 ];
 
 export default function App() {
@@ -1258,8 +1258,8 @@ export default function App() {
     try {
       await loadPageData(page, user.role, true);
     } catch (error) {
-      setPageLoadError({ key: currentPageKey, message: error.message || 'Data halaman gagal dimuat.' });
-      setNoticeSafe({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
+      setPageLoadError({ key: currentPageKey, message: error.message || 'Failed to load page data.' });
+      setNoticeSafe({ type: 'error', message: error.message || 'Failed to load page data.' });
     }
   }
 
@@ -1279,8 +1279,8 @@ export default function App() {
     const pageKey = `${user.role}:${user.id}:${page}`;
     setPageLoadError(null);
     loadPageData(page, user.role).catch((error) => {
-      setPageLoadError({ key: pageKey, message: error.message || 'Data halaman gagal dimuat.' });
-      setNotice({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
+      setPageLoadError({ key: pageKey, message: error.message || 'Failed to load page data.' });
+      setNotice({ type: 'error', message: error.message || 'Failed to load page data.' });
     });
   }, [user?.id, user?.role, page, loadPageData]);
 
@@ -1491,7 +1491,7 @@ export default function App() {
 
 
   async function approveRegistration(userRecord, status) {
-    const action = status === 'APPROVED' ? 'menyetujui' : 'menolak';
+    const action = status === 'APPROVED' ? 'approve' : 'reject';
     if (!window.confirm(`Confirm ${action} registration for ${userRecord.username}?`)) return;
     setBusy(true);
     try {
@@ -1516,10 +1516,10 @@ export default function App() {
     return financeRequest('/admin/finance/spending-periods', 'POST', payload, 'Spending period created.');
   }
   async function updateSpendingPeriod(payload) {
-    return financeRequest('/admin/finance/spending-periods/current', 'PATCH', payload, 'Date Range periode diperbarui.');
+    return financeRequest('/admin/finance/spending-periods/current', 'PATCH', payload, 'Period date range updated.');
   }
   async function resetSpendingPeriod(payload) {
-    return financeRequest('/admin/finance/spending-periods/reset', 'POST', payload, 'Spending Period di-reset.');
+    return financeRequest('/admin/finance/spending-periods/reset', 'POST', payload, 'Spending period reset.');
   }
   async function setCashOpeningBalance(payload) {
     return financeRequest('/admin/finance/cash/opening-balance', 'POST', payload, 'Opening cash balance saved.');
@@ -1639,7 +1639,7 @@ export default function App() {
 
 Type RESET 30SFAMS to continue:`);
     if (typed !== 'RESET 30SFAMS') { if (typed !== null) setNoticeSafe({ type: 'error', message: 'Confirmation did not match. No orders were archived.' }); return; }
-    const reason = window.prompt('Archive reason (optional):', 'Penutupan periode pemesanan 30sFams');
+    const reason = window.prompt('Archive reason (optional):', '30sFams order period closing');
     if (reason === null) return;
     setBusy(true);
     try {
@@ -1696,7 +1696,7 @@ ${approved} Approved orders will return reserved stock to available stock. Compl
   }
 
   async function adjustStock(resource) {
-    const raw = window.prompt(`Available stock saat ini: ${resource.stockAvailable}\nMasukkan perubahan stok. Gunakan angka positif untuk menambah, negatif untuk mengurangi.`, '10');
+    const raw = window.prompt(`Current available stock: ${resource.stockAvailable}\nEnter the stock adjustment. Use a positive number to add stock or a negative number to remove stock.`, '10');
     if (raw === null) return;
     const delta = Number(raw);
     if (!Number.isInteger(delta) || delta === 0) { setNoticeSafe({ type: 'error', message: 'Enter a non-zero whole number.' }); return; }
@@ -1779,7 +1779,7 @@ ${approved} Approved orders will return reserved stock to available stock. Compl
         {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Refreshing data...</div>}
         {page === 'dashboard' && <Dashboard user={user} resources={isAdmin ? [] : resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
         {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
-        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Orders saya" description="Track your orders, view invoices, cancel Pending orders, or reorder completed transactions." /><div className="panel"><OrderTable orders={isAdmin ? adminMyOrders : orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetails={openOrderDetails} onReorder={reorderOrder} busy={busy} /></div></>}
+        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="My Orders" description="Track your orders, view invoices, cancel Pending orders, or reorder completed transactions." /><div className="panel"><OrderTable orders={isAdmin ? adminMyOrders : orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetails={openOrderDetails} onReorder={reorderOrder} busy={busy} /></div></>}
         {page === 'inventory' && isAdmin && <Inventory resources={inventoryResources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
         {page === 'stash' && isAdmin && <StashPage resources={stashResources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
