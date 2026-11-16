@@ -101,6 +101,7 @@ const createSchema = z.object({
 });
 const updateSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
+  sku: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()).optional(),
   description: z.string().max(500).optional(),
   category: z.enum(categories).optional(),
   unit: z.string().trim().min(1).max(24).optional(),
@@ -238,8 +239,29 @@ router.delete('/:id/image', requireAdmin, asyncHandler(async (req, res) => {
 router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
   const data = updateSchema.parse(req.body);
   if (!Object.keys(data).length) throw new HttpError(400, 'Tidak ada perubahan yang dikirim.');
-  const resource = await prisma.resource.update({ where: { id: req.params.id }, data });
-  await prisma.activityLog.create({ data: { userId: req.user.id, action: 'RESOURCE_UPDATED', detail: `Memperbarui resource ${resource.name} (${resource.sku})` } });
+
+  const resource = await prisma.$transaction(async (tx) => {
+    const current = await tx.resource.findUnique({ where: { id: req.params.id } });
+    if (!current) throw new HttpError(404, 'Resource tidak ditemukan.');
+
+    if (data.sku) {
+      const existingSku = await tx.resource.findUnique({ where: { sku: data.sku } });
+      if (existingSku && existingSku.id !== current.id) {
+        throw new HttpError(409, 'SKU sudah digunakan oleh resource lain. Gunakan SKU yang berbeda.');
+      }
+    }
+
+    const updated = await tx.resource.update({ where: { id: current.id }, data });
+    await tx.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'RESOURCE_UPDATED',
+        detail: `Memperbarui data resource ${current.name} (${current.sku}) menjadi ${updated.name} (${updated.sku}). Field: ${Object.keys(data).join(', ')}`,
+      },
+    });
+    return updated;
+  });
+
   res.json({ resource: serializeResource(resource) });
 }));
 
