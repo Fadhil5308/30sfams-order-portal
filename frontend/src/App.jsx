@@ -98,7 +98,7 @@ function AuthScreen({ onAuthenticated, setNotice }) {
           <button className="button button-primary button-full" disabled={busy}>{busy ? 'Processing...' : 'Sign in to dashboard'} <ArrowUpRight size={17} /></button>
         </form> : <form onSubmit={submitRegistration} className="form-stack">
           <label>Username<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={registerForm.username} onChange={(event) => setRegisterForm({ ...registerForm, username: event.target.value })} placeholder="Example: member30s" autoComplete="username" /></label>
-          <label>Email<input required type="email" maxLength={150} value={registerForm.email} onChange={(event) => setRegisterForm({ ...registerForm, email: event.target.value })} placeholder="nama@email.com" autoComplete="email" /></label>
+          <label>Email<input required type="email" maxLength={150} value={registerForm.email} onChange={(event) => setRegisterForm({ ...registerForm, email: event.target.value })} placeholder="name@email.com" autoComplete="email" /></label>
           <label>Password<input required type="password" minLength={12} maxLength={100} value={registerForm.password} onChange={(event) => setRegisterForm({ ...registerForm, password: event.target.value })} placeholder="At least 12 characters" autoComplete="new-password" /></label>
           <label>Confirm password<input required type="password" minLength={12} maxLength={100} value={registerForm.confirmPassword} onChange={(event) => setRegisterForm({ ...registerForm, confirmPassword: event.target.value })} placeholder="Re-enter password" autoComplete="new-password" /></label>
           <button className="button button-primary button-full" disabled={busy || registerForm.password !== registerForm.confirmPassword}>{busy ? 'Submitting registration...' : 'Submit registration'} <ArrowUpRight size={17} /></button>
@@ -347,7 +347,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
     });
   }
   return <>
-    <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Favorite Resources' : 'Browse resources'} description={favoriteOnly ? 'Your saved favorite resources for future orders.' : isAdminMode ? 'Browse resources untuk kebutuhan akun Super Admin. Orders tercatat atas nama akun ini dan tetap masuk ke daftar Semua Orders.' : 'Find the items you need, choose quantities, and submit your order for admin review.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
+    <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Favorite Resources' : 'Browse resources'} description={favoriteOnly ? 'Your saved favorite resources for future orders.' : isAdminMode ? 'Browse resources for your Super Admin account. Orders are placed under this account and appear in All Orders.' : 'Find the items you need, choose quantities, and submit your order for admin review.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
     <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource name or SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">All categories</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
     {filtered.length ? <><div className="resource-grid">{visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
@@ -356,7 +356,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
         {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
         <small>{resource.sku}</small>
       </div>
-      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'} aria-label={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'No description available for this resource.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'} aria-label={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'No description available for this resource.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available Stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
         <div className="resource-action"><div className="quantity-control"><button type="button" onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} disabled={!cart[resource.id] || busy} aria-label={`Decrease quantity for ${resource.name}`}>−</button><input className="quantity-input" type="number" inputMode="numeric" min="0" max={resource.stockAvailable} step="1" value={cart[resource.id] || ''} placeholder="0" disabled={resource.stockAvailable <= 0 || busy} onChange={(event) => setCartQuantity(resource.id, event.target.value, resource.stockAvailable)} aria-label={`Quantity for ${resource.name}`} /><button type="button" onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={resource.stockAvailable <= 0 || busy || (cart[resource.id] || 0) >= resource.stockAvailable} aria-label={`Increase quantity for ${resource.name}`}>+</button></div></div>
       </div>
     </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={Search} title="No resources found" detail="Try changing your search term or category filter." />}
@@ -390,7 +390,7 @@ function OrderTable({ orders, isAdmin, onAction, onDetails, onRestore, onReorder
   return <><div className="table-wrap"><table><thead><tr>{isAdmin && <th>Ordered By</th>}<th>Order number</th><th>Date</th>{isArchived && <th>Diarsipkan</th>}<th>Resource</th><th>Quantity</th><th>Total amount</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
     {isAdmin && <td><div className="user-cell"><div className="avatar-mini">{(order.user?.username || 'U').slice(0, 1).toUpperCase()}</div>{order.user?.username || '-'}</div></td>}
     <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Note: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{(Array.isArray(order.items) ? order.items : []).map((item) => <span key={item.id || item.resourceId || item.resourceName}>{item.resourceName || 'Resource'}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
-    <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetails(order)}><FileText size={13} /> Details</button>{isArchived && isAdmin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Restore</button>}{!readOnly && isAdmin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Approve"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Reject"><X size={15} /></button></>}{!readOnly && isAdmin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Konfirmasi penyerahan langsung dan selesaikan"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Cancel and release stock"><X size={15} /></button></>}{!readOnly && !isAdmin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Cancel</button>}{!readOnly && !isAdmin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Reorder</button>}</div></td>
+    <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetails(order)}><FileText size={13} /> Details</button>{isArchived && isAdmin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Restore</button>}{!readOnly && isAdmin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Approve"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Reject"><X size={15} /></button></>}{!readOnly && isAdmin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Confirm handover and complete"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Cancel and release stock"><X size={15} /></button></>}{!readOnly && !isAdmin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Cancel</button>}{!readOnly && !isAdmin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Reorder</button>}</div></td>
   </tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={orders.length} onPageChange={setPage} /></>;
 }
 
@@ -421,7 +421,7 @@ function OrderDetailsModal({ order, onClose, onPrint, isAdmin }) {
 }
 
 function exportOrdersForExcel(orders) {
-  const headers = ['Order Number', 'Date', 'Status', 'Date Arsip', 'Archived By', 'Username', 'Email', 'Member Notes', 'Admin Notes', 'Resource', 'Category', 'Quantity', 'Unit', 'Unit Price (USD)', 'Subtotal (USD)', 'Total Quantity Orders', 'Total Nominal Orders (USD)'];
+  const headers = ['Order Number', 'Date', 'Status', 'Archive Date', 'Archived By', 'Username', 'Email', 'Member Notes', 'Admin Notes', 'Resource', 'Category', 'Quantity', 'Unit', 'Unit Price (USD)', 'Subtotal (USD)', 'Total Quantity Orders', 'Order Total (USD)'];
   const rows = orders.flatMap((order) => (order.items || []).map((item) => [
     order.orderNumber, new Date(order.createdAt).toLocaleString('en-US'), statusLabel(order.status),
     order.archivedAt ? new Date(order.archivedAt).toLocaleString('en-US') : '', order.archivedBy?.username || '',
@@ -430,7 +430,7 @@ function exportOrdersForExcel(orders) {
   ]));
   const escape = (value) => {
     let text = String(value ?? '');
-    if (typeof value === 'string' && /^[\s]*[=+@\-]/.test(text)) text = `'${text}`; // Mencegah CSV formula injection saat dibuka di Excel.
+    if (typeof value === 'string' && /^[\s]*[=+@\-]/.test(text)) text = `'${text}`; // Prevents CSV formula injection when opened in Excel.
     return `"${text.replaceAll('"', '""')}"`;
   };
   const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
@@ -478,7 +478,7 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
   useEffect(() => setPage(1), [filter, statusFilter, search, resources]);
   return <>
     <SectionHeader eyebrow="INVENTORY CONTROL" title="Inventory Management" description="Add resources, update prices, and track every inventory change." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Add Resource</button>} />
-    {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>New Resource</h3><p>The resource will appear in the catalog and can be ordered based on available stock.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Resource name<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Example: WEAPON_PISTOL" /></label><label>SKU / unique code<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Category<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Unit<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Unit price (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Initial Stock<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label>Minimum stock threshold<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(e) => setDraft({ ...draft, minStock: e.target.value })} /><small className="field-hint">Isi 0 jika tidak memakai batas minimum.</small></label><label className="span-two">Description<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Brief resource description" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Cancel</button><button className="button button-primary" disabled={busy}>Save Resource</button></div></form>}
+    {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>New Resource</h3><p>The resource will appear in the catalog and can be ordered based on available stock.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Resource name<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Example: WEAPON_PISTOL" /></label><label>SKU / unique code<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Category<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Unit<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Unit price (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Initial Stock<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label>Minimum stock threshold<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(e) => setDraft({ ...draft, minStock: e.target.value })} /><small className="field-hint">Enter 0 to disable the minimum threshold.</small></label><label className="span-two">Description<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Brief resource description" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Cancel</button><button className="button button-primary" disabled={busy}>Save Resource</button></div></form>}
     <div className="panel"><div className="panel-heading"><div><h3>Inventory List</h3><p>{number(shown.length)} dari {number(resources.length)} items shown</p></div><div className="inventory-count">{number(shown.length)} hasil</div></div>
       <div className="catalog-toolbar inventory-toolbar">
         <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search resource name or SKU..." /></div>
@@ -489,7 +489,7 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
         const available = Number(resource.stockAvailable || 0);
         const minimum = Number(resource.minStock || 0);
         const low = available <= 0 || (minimum > 0 && available <= minimum);
-        return <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td>{number(minimum)} {resource.unit}</td><td><div className="inventory-status-stack"><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Active' : 'Inactive'}</span>{resource.isActive && low && <span className={`stock-tag ${available <= 0 ? 'out-stock' : 'low-stock'}`}>{available <= 0 ? 'Out of stock' : 'Low stock'}</span>}</div></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Change Image' : 'Upload Image'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Remove Image"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Adjust Stock</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Edit resource details"><Pencil size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Nonaktifkan' : 'Aktifkan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>;
+        return <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td>{number(minimum)} {resource.unit}</td><td><div className="inventory-status-stack"><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Active' : 'Inactive'}</span>{resource.isActive && low && <span className={`stock-tag ${available <= 0 ? 'out-stock' : 'low-stock'}`}>{available <= 0 ? 'Out of stock' : 'Low stock'}</span>}</div></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Change Image' : 'Upload Image'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Remove Image"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Adjust Stock</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Edit resource details"><Pencil size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Deactivate' : 'Activate'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>;
       })}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={shown.length} onPageChange={setPage} /></> : <EmptyState title="No resources found" detail={resources.length ? 'Try changing the search term or category/status filter.' : 'No resources yet. Add your first resource using the Add Resource button.'} />}
     </div>
   </>;
@@ -578,7 +578,7 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
               <div className="resource-name-row"><h3>{resource.name}</h3><span className={`stock-tag ${statusClass}`}>{statusText}</span></div>
               <p>{resource.description || 'No description available for this item.'}</p>
               <div className="resource-meta"><span>Total in stash</span><strong>{number(itemTotal)} {resource.unit}</strong></div>
-              <div className="resource-meta"><span>Available stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+              <div className="resource-meta"><span>Available Stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
               <div className="resource-meta"><span>Reserved</span><strong>{number(resource.stockReserved)} {resource.unit}</strong></div>
               <div className="resource-action"><button className="button button-outline button-full" disabled={busy} onClick={() => onStock(resource)}><SlidersHorizontal size={14} /> Adjust Stock</button></div>
             </div>
@@ -603,7 +603,7 @@ function Reports({ reports }) {
       <StatCard label="Total Orders" value={number(summary.totalOrders)} detail={`${number(summary.totalUsers)} user · ${number(summary.activeResources)} resource aktif`} icon={ClipboardList} tone="purple" />
     </div>
     <div className="dashboard-grid reports-grid"><div className="panel"><div className="panel-heading"><div><h3>Sales by Category</h3><p>Completed orders only</p></div></div>{categories.length ? <div className="table-wrap"><table><thead><tr><th>Category</th><th>Quantity Sold</th><th>Nominal</th></tr></thead><tbody>{categories.map(([category, values]) => <tr key={category}><td className="strong-cell">{categoryLabel(category)}</td><td>{number(values.quantity)} unit</td><td>{money(values.amount)}</td></tr>)}</tbody></table></div> : <EmptyState title="No completed sales yet" detail="Category reports will appear once orders are completed." />}</div>
-      <div className="panel"><div className="panel-heading"><div><h3>Top Resources</h3><p>Based on completed order quantities</p></div></div>{reports.topResources?.length ? <div className="compact-list">{reports.topResources.map((item, i) => <div className="compact-row" key={item.resourceId}><div className="rank-number">{String(i + 1).padStart(2, '0')}</div><div className="compact-main"><strong>{item.name}</strong><span>{number(item.quantity)} units sold</span></div><div className="compact-side"><strong>{money(item.amount)}</strong></div></div>)}</div> : <EmptyState title="No data yet" detail="Top Resources akan muncul di sini." />}</div></div>
+      <div className="panel"><div className="panel-heading"><div><h3>Top Resources</h3><p>Based on completed order quantities</p></div></div>{reports.topResources?.length ? <div className="compact-list">{reports.topResources.map((item, i) => <div className="compact-row" key={item.resourceId}><div className="rank-number">{String(i + 1).padStart(2, '0')}</div><div className="compact-main"><strong>{item.name}</strong><span>{number(item.quantity)} units sold</span></div><div className="compact-side"><strong>{money(item.amount)}</strong></div></div>)}</div> : <EmptyState title="No data yet" detail="Top resources will appear here." />}</div></div>
     <div className="panel status-report"><div className="panel-heading"><div><h3>Order Status</h3><p>Number of orders at each stage</p></div></div><div className="status-summary">{[['PENDING','Pending',summary.pendingOrders],['APPROVED','Approved',summary.approvedOrders],['COMPLETED','Completed',summary.completedOrders],['REJECTED','Rejected',summary.rejectedOrders],['CANCELLED','Cancelled',summary.cancelledOrders]].map(([key, label, value]) => <div key={key}><StatusPill status={key} /><strong>{number(value)}</strong><span>{label}</span></div>)}</div></div>
   </>;
 }
@@ -720,7 +720,7 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
   async function resetPeriod() {
     const typed = window.prompt('The current period will be saved to history and a new period will begin. Lifetime totals will not be deleted. Type RESET PERIOD 30SFAMS to continue:');
     if (typed !== 'RESET PERIOD 30SFAMS') return;
-    await onResetPeriod({ confirmation: typed, name: periodDraft.name || 'Periode baru' });
+    await onResetPeriod({ confirmation: typed, name: periodDraft.name || 'New Period' });
   }
   async function submitOpening(event) {
     event.preventDefault();
@@ -828,7 +828,7 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
         {visibleCashEntries.length > cashPageSize && <DataPagination page={safeCashPage} pageSize={cashPageSize} total={visibleCashEntries.length} onPageChange={setCashPage} />}
       </section>
     </div>
-    <div className="finance-footnote"><ShieldCheck size={15}/><span>{cash.note} Lifetime Spending dihitung dari semua completed orders dan tidak pernah dihapus saat periode di-reset.</span></div>
+    <div className="finance-footnote"><ShieldCheck size={15}/><span>{cash.note} Lifetime spending includes all completed orders and is never deleted when a period is reset.</span></div>
   </>;
 }
 
@@ -849,7 +849,7 @@ function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart
         <div className="resource-art-grid"/><span>{categoryLabel(resource.category)}</span>{!resource.imageUrl && <div className="resource-art-icon"><Package size={30}/></div>}<small>{resource.sku}</small>
       </div>
       <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3><button type="button" className="favorite-toggle active" onClick={() => onToggleFavorite(resource)} title="Delete favorit"><Star size={16} fill="currentColor"/></button></div>
-        <p>{resource.description || 'No description.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+        <p>{resource.description || 'No description.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available Stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
         <button className="button button-primary button-full" disabled={busy || resource.stockAvailable <= 0 || (cart[resource.id] || 0) >= resource.stockAvailable} onClick={() => addToCart(resource)}><ShoppingCart size={15}/> Add to Cart</button>
       </div>
     </article>)}</div><DataPagination page={page} pageSize={pageSize} total={favorites.length} onPageChange={setPage} /></> : <div className="panel"><EmptyState icon={Star} title="No favorite resources yet" detail="Open the catalog and select the star icon on any resource you want to save."/></div>}
@@ -882,7 +882,7 @@ function StockMovementPage({ movements }) {
   return <>
     <SectionHeader eyebrow="INVENTORY AUDIT TRAIL" title="Stock Movement History" description="All restocks, adjustments, reservations, released reservations, and resource handovers are recorded here." action={<div className="header-actions"><div className="filter-select compact"><SlidersHorizontal size={15}/><select value={type} onChange={(event) => setType(event.target.value)}><option value="ALL">All Activities</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><ChevronDown size={14}/></div><button className="button button-outline button-small" onClick={exportMovements} disabled={!filtered.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
     <div className="panel"><div className="panel-heading"><div><h3>Stock Ledger</h3><p>{number(filtered.length)} latest records · maximum 200 records</p></div><History size={19}/></div>
-      {filtered.length ? <><div className="table-wrap"><table><thead><tr><th>Date & Time</th><th>Resource</th><th>Activity</th><th>Quantity</th><th>Order number</th><th>Performed By</th><th>Notes</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={History} title="No stock records yet" detail="Activity inventory akan tercatat saat stok dibuat, disesuaikan, dicadangkan, dikembalikan, atau diserahkan."/>}
+      {filtered.length ? <><div className="table-wrap"><table><thead><tr><th>Date & Time</th><th>Resource</th><th>Activity</th><th>Quantity</th><th>Order number</th><th>Performed By</th><th>Notes</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={History} title="No stock records yet" detail="Inventory activity is recorded when stock is created, adjusted, reserved, released, or handed over."/>}
     </div>
   </>;
 }
@@ -903,7 +903,7 @@ function MemberStatsPage({ data }) {
     <SectionHeader eyebrow="MEMBER INSIGHTS" title="Member Statistics" description="Track each member’s ordering activity based on completed orders." action={<div className="header-actions"><div className="date-chip"><ShieldCheck size={15}/> Admin only</div><button className="button button-outline button-small" onClick={exportMembers} disabled={!members.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
     <div className="stats-grid"><StatCard label="Total Members" value={number(summary.totalMembers)} detail={`${number(summary.activeMembers)} active accounts`} icon={Users} tone="blue"/><StatCard label="Awaiting Activation" value={number(summary.pendingRegistrations)} detail="New registrations" icon={Clock3} tone="orange"/><StatCard label="Completed Orders" value={number(summary.completedOrders)} detail={`${number(summary.completedQuantity)} unit`} icon={Package} tone="green"/><StatCard label="Total Spending" value={money(summary.completedAmount)} detail="All members combined" icon={CircleDollarSign} tone="purple"/></div>
     <div className="panel"><div className="panel-heading"><div><h3>Member Purchase Activity</h3><p>Sorted by highest completed spending.</p></div><Users size={19}/></div>
-      {members.length ? <><div className="table-wrap"><table><thead><tr><th>Anggota</th><th>Account Status</th><th>Completed Orders</th><th>Total Quantity</th><th>Total Spending</th><th>Active Orders</th><th>Last Purchase</th></tr></thead><tbody>{visibleMembers.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${!member.deletedAt && member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.deletedAt ? 'Deleted' : member.registrationStatus === 'PENDING' ? 'Pending' : member.registrationStatus === 'REJECTED' ? 'Rejected' : member.isActive ? 'Active' : 'Inactive'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'None yet'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={members.length} onPageChange={setPage} /></> : <EmptyState icon={Users} title="No members yet" detail="Registered members will appear here."/>}
+      {members.length ? <><div className="table-wrap"><table><thead><tr><th>Member</th><th>Account Status</th><th>Completed Orders</th><th>Total Quantity</th><th>Total Spending</th><th>Active Orders</th><th>Last Purchase</th></tr></thead><tbody>{visibleMembers.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${!member.deletedAt && member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.deletedAt ? 'Deleted' : member.registrationStatus === 'PENDING' ? 'Pending' : member.registrationStatus === 'REJECTED' ? 'Rejected' : member.isActive ? 'Active' : 'Inactive'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'None yet'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={members.length} onPageChange={setPage} /></> : <EmptyState icon={Users} title="No members yet" detail="Registered members will appear here."/>}
     </div>
   </>;
 }
@@ -1397,7 +1397,7 @@ export default function App() {
   }
 
   async function deleteManualNote(note) {
-    if (!window.confirm(`Delete Note "${note.title}"? Catatan yang dihapus tidak dapat dikembalikan.`)) return;
+    if (!window.confirm(`Delete note "${note.title}"? This note cannot be recovered once deleted.`)) return;
     setBusy(true);
     try {
       await api(`/admin/notes/${note.id}`, { method: 'DELETE' });
@@ -1462,7 +1462,7 @@ export default function App() {
 
   async function deleteUser(userRecord) {
     const confirmed = window.confirm(
-      `Delete akun Member "${userRecord.username}"? Akun akan langsung kehilangan akses dan dihapus dari daftar anggota. Riwayat pesanan, stok, dan transaksi tetap disimpan untuk audit. Tindakan ini tidak dapat dibatalkan dari aplikasi.`
+      `Delete Member account "${userRecord.username}"? The account will immediately lose access and be removed from the member list. Order, stock, and transaction history will be retained for audit. This action cannot be undone in the app.`
     );
     if (!confirmed) return;
     setBusy(true);
@@ -1513,7 +1513,7 @@ export default function App() {
     finally { setBusy(false); }
   }
   async function startSpendingPeriod(payload) {
-    return financeRequest('/admin/finance/spending-periods', 'POST', payload, 'Spending Period dibuat.');
+    return financeRequest('/admin/finance/spending-periods', 'POST', payload, 'Spending period created.');
   }
   async function updateSpendingPeriod(payload) {
     return financeRequest('/admin/finance/spending-periods/current', 'PATCH', payload, 'Date Range periode diperbarui.');
@@ -1531,7 +1531,7 @@ export default function App() {
     return financeRequest('/admin/finance/cash/income', 'POST', payload, 'Cash balance increase recorded.');
   }
   async function adjustCash(payload) {
-    return financeRequest('/admin/finance/cash/adjustments', 'POST', payload, 'Cash Balance Adjustment dicatat.');
+    return financeRequest('/admin/finance/cash/adjustments', 'POST', payload, 'Cash balance adjustment recorded.');
   }
 
   async function testDiscord() {
@@ -1539,7 +1539,7 @@ export default function App() {
     try {
       const result = await api('/admin/integrations/discord/test', { method: 'POST', body: JSON.stringify({}) });
       await refresh();
-      setNoticeSafe({ type: 'success', message: result.message || 'Test Discord berhasil.' });
+      setNoticeSafe({ type: 'success', message: result.message || 'Discord test completed successfully.' });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1570,7 +1570,7 @@ export default function App() {
       if (isFavorite) await api(`/favorites/${resource.id}`, { method: 'DELETE' });
       else await api(`/favorites/${resource.id}`, { method: 'POST', body: JSON.stringify({}) });
       setFavoriteIds((current) => isFavorite ? current.filter((id) => id !== resource.id) : [...current, resource.id]);
-      setNoticeSafe({ type: 'success', message: isFavorite ? `${resource.name} dihapus dari favorit.` : `${resource.name} ditambahkan ke favorit.` });
+      setNoticeSafe({ type: 'success', message: isFavorite ? `${resource.name} was removed from favorites.` : `${resource.name} was added to favorites.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
   }
 
@@ -1587,12 +1587,12 @@ export default function App() {
 
   async function cancelOwnOrder(order, action) {
     if (action !== 'cancel') return;
-    if (!window.confirm(`Cancel pesanan ${order.orderNumber}? Stock yang sudah dicadangkan akan dikembalikan ke inventory.`)) return;
+    if (!window.confirm(`Cancel order ${order.orderNumber}? Reserved stock will be returned to inventory.`)) return;
     setBusy(true);
     try {
       const result = await api(`/orders/${order.id}/cancel`, { method: 'POST', body: JSON.stringify({}) });
       await Promise.all([refresh(), refreshNotifications()]);
-      setNoticeSafe({ type: 'success', message: result.order?.orderNumber ? `Orders ${result.order.orderNumber} berhasil dibatalkan.` : 'Orders berhasil dibatalkan.' });
+      setNoticeSafe({ type: 'success', message: result.order?.orderNumber ? `Order ${result.order.orderNumber} was cancelled successfully.` : 'Order cancelled successfully.' });
     } catch (error) {
       setNoticeSafe({ type: 'error', message: error.message });
     } finally {
@@ -1607,7 +1607,7 @@ export default function App() {
     try {
       const result = await api('/orders', { method: 'POST', body: JSON.stringify({ items, notes }) });
       setCart({}); await Promise.all([refresh(), refreshNotifications()]); setPage('my-orders');
-      setNoticeSafe({ type: 'success', message: isAdmin ? `${result.order.orderNumber} dibuat atas nama akun Super Admin. Buka Semua Orders untuk meninjau dan memprosesnya.` : `${result.order.orderNumber} was submitted successfully. Awaiting admin approval.` });
+      setNoticeSafe({ type: 'success', message: isAdmin ? `Order ${result.order.orderNumber} was created under the Super Admin account. Open All Orders to review and process it.` : `${result.order.orderNumber} was submitted successfully. Awaiting admin approval.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1634,7 +1634,7 @@ export default function App() {
   }
 
   async function archiveAllOrders() {
-    if (!orders.length) { setNoticeSafe({ type: 'error', message: 'Tidak ada active orders untuk diarsipkan.' }); return; }
+    if (!orders.length) { setNoticeSafe({ type: 'error', message: 'There are no active orders to archive.' }); return; }
     const typed = window.prompt(`You are about to archive ${orders.length} active orders. Order data, invoices, reports, and stock records will be retained.
 
 Type RESET 30SFAMS to continue:`);
@@ -1651,7 +1651,7 @@ Type RESET 30SFAMS to continue:`);
   }
 
   async function restoreArchivedOrder(order) {
-    if (!window.confirm(`Restore ${order.orderNumber} ke daftar active orders? Status dan stok tidak akan diubah.`)) return;
+    if (!window.confirm(`Restore ${order.orderNumber} to the active order list? Order status and stock will remain unchanged.`)) return;
     setBusy(true);
     try {
       const result = await api(`/admin/orders/${order.id}/restore`, { method: 'POST' });
@@ -1703,7 +1703,7 @@ ${approved} Approved orders will return reserved stock to available stock. Compl
     const note = window.prompt('Reason for stock adjustment:', delta > 0 ? 'Restock' : 'Stock adjustment');
     if (note === null || note.trim().length < 3) return;
     setBusy(true);
-    try { await api(`/resources/${resource.id}/stock`, { method: 'PATCH', body: JSON.stringify({ delta, note }) }); await refresh(); setNoticeSafe({ type: 'success', message: `Stock ${resource.name} berhasil diperbarui.` }); }
+    try { await api(`/resources/${resource.id}/stock`, { method: 'PATCH', body: JSON.stringify({ delta, note }) }); await refresh(); setNoticeSafe({ type: 'success', message: `Stock for ${resource.name} updated successfully.` }); }
     catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1786,7 +1786,7 @@ ${approved} Approved orders will return reserved stock to available stock. Compl
         {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
         {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
         {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="All Orders" description="Review requests, approve stock reservations, and mark orders as Completed once resources have been handed over. Reservations do not expire automatically and are managed manually by admins." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Cancel Active Orders</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Archive All</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} active orders</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetails={openOrderDetails} busy={busy} /></div></>}
-        {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Archived Orders" description="All Orders yang diarsipkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export Archive CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} arsip</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetails={openOrderDetails} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
+        {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Archived Orders" description="All archived orders. Data remains available for details, invoices, reports, and audits." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export Archive CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} archived</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetails={openOrderDetails} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
         {page === 'reports' && isAdmin && <Reports reports={reports} />}
         {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onDelete={deleteUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
         {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
