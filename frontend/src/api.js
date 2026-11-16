@@ -19,9 +19,55 @@ export function assetUrl(path) {
   return new URL(path, `${API_ORIGIN}/`).toString();
 }
 
+async function optimizeImageFile(file) {
+  const supportedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (
+    !file ||
+    !supportedTypes.includes(file.type) ||
+    typeof createImageBitmap !== 'function' ||
+    typeof document === 'undefined'
+  ) {
+    // Keep animated GIFs and unsupported browser formats unchanged.
+    return file;
+  }
+
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+    const longestSide = Math.max(bitmap.width, bitmap.height);
+    const scale = Math.min(1, 1440 / longestSide);
+    if (scale === 1 && file.size < 450 * 1024) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d', { alpha: true });
+    if (!context) return file;
+
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const optimizedBlob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', 0.82);
+    });
+
+    if (!optimizedBlob || optimizedBlob.size >= file.size) return file;
+
+    const safeName = file.name.replace(/\.[^.]+$/, '') || 'resource-image';
+    return new File([optimizedBlob], `${safeName}.webp`, {
+      type: 'image/webp',
+      lastModified: Date.now(),
+    });
+  } catch {
+    // Upload the original when the browser cannot decode or convert the file.
+    return file;
+  } finally {
+    bitmap?.close?.();
+  }
+}
+
 export async function uploadFile(path, file) {
   const form = new FormData();
-  form.append('image', file);
+  const optimizedFile = await optimizeImageFile(file);
+  form.append('image', optimizedFile);
 
   const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
