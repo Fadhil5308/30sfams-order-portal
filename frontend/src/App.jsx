@@ -348,7 +348,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
     <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama resource atau SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
     {filtered.length ? <><div className="resource-grid">{visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
-        {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" />}
+        {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
         <div className="resource-art-grid" /><span>{categoryLabel(resource.category)}</span>
         {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
         <small>{resource.sku}</small>
@@ -459,7 +459,7 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
   const shown = resources.filter((resource) => {
     const available = Number(resource.stockAvailable || 0);
     const minimum = Number(resource.minStock || 0);
-    const isLow = available <= 0 || (minimum > 0 && available <= minimum);
+    const isLow = resource.isActive && (available <= 0 || (minimum > 0 && available <= minimum));
     const matchesCategory = filter === 'ALL' || resource.category === filter;
     const matchesStatus = statusFilter === 'ALL'
       || (statusFilter === 'ACTIVE' && resource.isActive)
@@ -559,7 +559,7 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
           const statusClass = resource.isActive && itemTotal > 0 ? 'in-stock' : 'out-stock';
           return <article className="resource-card stash-resource-card" key={resource.id}>
             <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
-              {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" />}
+              {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
               <div className="resource-art-grid" />
               <span>{categoryLabel(resource.category)}</span>
               {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
@@ -836,7 +836,7 @@ function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart
     <SectionHeader eyebrow="SAVED RESOURCES" title="Resource favorit" description="Simpan item yang sering dipesan agar lebih cepat ditemukan kembali." />
     {favorites.length ? <><div className="resource-grid">{visibleFavorites.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
-        {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" />}
+        {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
         <div className="resource-art-grid"/><span>{categoryLabel(resource.category)}</span>{!resource.imageUrl && <div className="resource-art-icon"><Package size={30}/></div>}<small>{resource.sku}</small>
       </div>
       <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3><button type="button" className="favorite-toggle active" onClick={() => onToggleFavorite(resource)} title="Hapus favorit"><Star size={16} fill="currentColor"/></button></div>
