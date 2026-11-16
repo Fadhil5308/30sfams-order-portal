@@ -11,7 +11,7 @@ const router = Router();
 router.use(requireAuth, requireAdmin);
 
 router.get('/integrations/discord', asyncHandler(async (_req, res) => {
-  res.json({ configured: isDiscordWebhookConfigured(), message: isDiscordWebhookConfigured() ? 'Webhook Discord terdeteksi di konfigurasi backend.' : 'Webhook Discord belum dikonfigurasi atau format URL tidak valid.' });
+  res.json({ configured: isDiscordWebhookConfigured(), message: isDiscordWebhookConfigured() ? 'Discord webhook detected in backend configuration.' : 'Discord webhook is not configured or its URL format is invalid.' });
 }));
 
 router.get('/dashboard', asyncHandler(async (_req, res) => {
@@ -93,9 +93,9 @@ router.post('/integrations/discord/test', asyncHandler(async (req, res) => {
     description: `Webhook berhasil diuji oleh admin **${req.user.username}**. Notifikasi 30sFams siap diterima di channel ini.`,
     color: 0x16A34A,
   });
-  if (!sent) throw new HttpError(502, 'Discord belum dapat menerima notifikasi. Periksa webhook dan koneksi internet backend.');
+  if (!sent) throw new HttpError(502, 'Discord could not receive the notification. Check the webhook and backend internet connection.');
   await prisma.activityLog.create({ data: { userId: req.user.id, action: 'DISCORD_WEBHOOK_TESTED', detail: `Admin ${req.user.username} berhasil menguji koneksi webhook Discord.` } });
-  res.json({ ok: true, message: 'Tes Discord berhasil. Periksa channel Discord yang terhubung.' });
+  res.json({ ok: true, message: 'Discord test succeeded. Check the connected Discord channel.' });
 }));
 
 const orderInclude = {
@@ -190,7 +190,7 @@ router.get('/orders', asyncHandler(async (req, res) => {
 
 router.get('/orders/:id', asyncHandler(async (req, res) => {
   const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: orderInclude });
-  if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+  if (!order) throw new HttpError(404, 'Order not found.');
   res.json({ order: serializeOrder(order) });
 }));
 
@@ -220,13 +220,13 @@ router.post('/orders/archive-all', asyncHandler(async (req, res) => {
 router.post('/orders/:id/restore', asyncHandler(async (req, res) => {
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id } });
-    if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
-    if (!order.archivedAt) throw new HttpError(409, 'Pesanan ini tidak berada di arsip.');
+    if (!order) throw new HttpError(404, 'Order not found.');
+    if (!order.archivedAt) throw new HttpError(409, 'This order is not archived.');
     const changed = await tx.order.updateMany({
       where: { id: order.id, archivedAt: { not: null } },
       data: { archivedAt: null, archivedById: null },
     });
-    if (changed.count !== 1) throw new HttpError(409, 'Pesanan berubah saat dipulihkan. Muat ulang halaman lalu coba lagi.');
+    if (changed.count !== 1) throw new HttpError(409, 'The order changed while being restored. Reload the page and try again.');
     await tx.activityLog.create({ data: {
       userId: req.user.id, action: 'ORDER_RESTORED',
       detail: `Memulihkan pesanan ${order.orderNumber} dari arsip ke daftar aktif.`,
@@ -282,8 +282,8 @@ router.post('/orders/cancel-active', asyncHandler(async (req, res) => {
 router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
-    if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
-    if (order.status !== 'PENDING') throw new HttpError(409, 'Hanya pesanan Pending yang dapat disetujui.');
+    if (!order) throw new HttpError(404, 'Order not found.');
+    if (order.status !== 'PENDING') throw new HttpError(409, 'Only Pending orders can be approved.');
 
     await ensureOrderReservation(tx, order, req.user.id);
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_APPROVED', detail: `Menyetujui pesanan ${order.orderNumber}` } });
@@ -302,15 +302,15 @@ router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
     console.error('Notifikasi persetujuan pesanan gagal disimpan:', error);
   }
   void sendDiscordNotification({ title: 'Pesanan disetujui', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** disetujui. Stok telah dicadangkan.` });
-  res.json({ order: serializeOrder(updated), message: 'Pesanan disetujui. Stok tetap diamankan dan tidak dipotong dua kali.' });
+  res.json({ order: serializeOrder(updated), message: 'Order approved. Stock remains reserved and will not be deducted twice.' });
 }));
 
 router.post('/orders/:id/reject', asyncHandler(async (req, res) => {
   const data = z.object({ adminNotes: z.string().trim().max(500).optional().default('') }).parse(req.body ?? {});
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
-    if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
-    if (order.status !== 'PENDING') throw new HttpError(409, 'Hanya pesanan Pending yang dapat ditolak.');
+    if (!order) throw new HttpError(404, 'Order not found.');
+    if (order.status !== 'PENDING') throw new HttpError(409, 'Only Pending orders can be rejected.');
     await releaseOrderReservation(tx, order, req.user.id, 'Cadangan dikembalikan karena pesanan ' + order.orderNumber + ' ditolak admin.');
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_REJECTED', detail: `Menolak pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
@@ -335,15 +335,15 @@ router.post('/orders/:id/complete', asyncHandler(async (req, res) => {
   const data = z.object({ handoverNote: z.string().trim().max(500).optional().default('') }).parse(req.body ?? {});
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
-    if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
-    if (order.status !== 'APPROVED') throw new HttpError(409, 'Hanya pesanan Approved yang dapat diselesaikan.');
+    if (!order) throw new HttpError(404, 'Order not found.');
+    if (order.status !== 'APPROVED') throw new HttpError(409, 'Only Approved orders can be completed.');
     const cashInitialized = await tx.gangCashEntry.findFirst({ where: { type: 'OPENING_BALANCE' }, select: { id: true } });
-    if (!cashInitialized) throw new HttpError(409, 'Atur saldo awal kas terlebih dahulu melalui menu Keuangan & Kas Gang sebelum menyelesaikan pesanan.');
+    if (!cashInitialized) throw new HttpError(409, 'Set the initial gang fund balance in Finance & Gang Fund before completing an order.');
     const existingIncome = await tx.gangCashEntry.findUnique({ where: { orderId: order.id }, select: { id: true } });
-    if (existingIncome) throw new HttpError(409, 'Pemasukan untuk pesanan ini sudah pernah dicatat. Tidak ada pemasukan ganda yang dibuat.');
+    if (existingIncome) throw new HttpError(409, 'Income for this order has already been recorded. No duplicate income was created.');
     const completedAt = new Date();
     const transition = await tx.order.updateMany({ where: { id: order.id, status: 'APPROVED' }, data: { status: 'COMPLETED', completedAt } });
-    if (transition.count !== 1) throw new HttpError(409, 'Status pesanan berubah saat diproses. Muat ulang data sebelum mencoba lagi.');
+    if (transition.count !== 1) throw new HttpError(409, 'The order status changed during processing. Reload the data before trying again.');
     const completedMovements = [];
     for (const item of order.items) {
       const changed = await tx.resource.updateMany({
@@ -382,14 +382,14 @@ router.post('/orders/:id/complete', asyncHandler(async (req, res) => {
     console.error('Notifikasi penyelesaian pesanan gagal disimpan:', error);
   }
   void sendDiscordNotification({ title: 'Resource diserahkan', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** selesai. Resource telah diserahkan.` , color: 0x16A34A });
-  res.json({ order: serializeOrder(updated), message: 'Pesanan selesai. Stok yang dicadangkan telah dikeluarkan dari inventory.' });
+  res.json({ order: serializeOrder(updated), message: 'Order completed. Reserved stock has been removed from inventory.' });
 }));
 
 router.post('/orders/:id/cancel', asyncHandler(async (req, res) => {
   const data = z.object({ adminNotes: z.string().trim().max(500).optional().default('') }).parse(req.body ?? {});
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
-    if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+    if (!order) throw new HttpError(404, 'Order not found.');
     if (!['PENDING', 'APPROVED'].includes(order.status)) throw new HttpError(409, 'Pesanan ini tidak dapat dibatalkan pada status sekarang.');
     await releaseOrderReservation(tx, order, req.user.id, `Cadangan dilepas karena ${order.orderNumber} dibatalkan oleh admin.`);
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_CANCELLED', detail: `Membatalkan pesanan ${order.orderNumber}` } });
@@ -408,7 +408,7 @@ router.post('/orders/:id/cancel', asyncHandler(async (req, res) => {
     console.error('Notifikasi pembatalan pesanan gagal disimpan:', error);
   }
   void sendDiscordNotification({ title: 'Pesanan dibatalkan', description: `Pesanan **${updated.orderNumber}** dibatalkan oleh admin.`, color: 0xD97706 });
-  res.json({ order: serializeOrder(updated), message: 'Pesanan dibatalkan.' });
+  res.json({ order: serializeOrder(updated), message: 'Order cancelled.' });
 }));
 
 router.get('/reports', asyncHandler(async (_req, res) => {
@@ -479,7 +479,7 @@ router.post('/users', asyncHandler(async (req, res) => {
   const username = data.username;
   const email = data.email.toLowerCase();
   const duplicate = await prisma.user.findFirst({ where: { OR: [{ username }, { email }] }, select: { id: true } });
-  if (duplicate) throw new HttpError(409, 'Username atau email sudah digunakan.');
+  if (duplicate) throw new HttpError(409, 'Username or email is already in use.');
   const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
@@ -501,9 +501,9 @@ router.post('/users', asyncHandler(async (req, res) => {
 router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
   const data = z.object({ status: z.enum(['APPROVED', 'REJECTED']) }).parse(req.body ?? {});
   const target = await prisma.user.findUnique({ where: { id: req.params.id, deletedAt: null }, select: { id: true, username: true, email: true, role: true, registrationStatus: true, isActive: true } });
-  if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
-  if (target.role !== 'USER') throw new HttpError(403, 'Akun admin tidak dapat diproses sebagai pendaftaran user.');
-  if (target.registrationStatus === 'APPROVED') throw new HttpError(409, 'Akun ini sudah diverifikasi. Gunakan pengaturan status akun untuk menonaktifkan atau mengaktifkan akses.');
+  if (!target) throw new HttpError(404, 'User not found.');
+  if (target.role !== 'USER') throw new HttpError(403, 'Administrator accounts cannot be processed as member registrations.');
+  if (target.registrationStatus === 'APPROVED') throw new HttpError(409, 'This account is already verified. Use account status settings to enable or disable access.');
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({
       where: { id: target.id },
@@ -539,22 +539,22 @@ router.get('/users', asyncHandler(async (_req, res) => {
 router.patch('/users/:id/role', asyncHandler(async (req, res) => {
   const data = z.object({ role: z.enum(['ADMIN', 'USER']) }).parse(req.body ?? {});
   if (req.params.id === req.user.id) {
-    throw new HttpError(409, 'Role akun yang sedang digunakan tidak dapat diubah sendiri.');
+    throw new HttpError(409, 'You cannot change the role of your own account.');
   }
 
   const target = await prisma.user.findUnique({
     where: { id: req.params.id, deletedAt: null },
     select: { id: true, username: true, role: true }, 
   });
-  if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
+  if (!target) throw new HttpError(404, 'User not found.');
   if (target.role === data.role) {
-    return res.json({ user: target, message: 'Role akun tidak berubah.' });
+    return res.json({ user: target, message: 'Account role was not changed.' });
   }
 
   if (target.role === 'ADMIN' && data.role === 'USER') {
     const superAdminCount = await prisma.user.count({ where: { role: 'ADMIN', isActive: true, registrationStatus: 'APPROVED', deletedAt: null } });
     if (superAdminCount <= 1) {
-      throw new HttpError(409, 'Super Admin aktif terakhir tidak dapat diturunkan menjadi Member.');
+      throw new HttpError(409, 'The last active Super Admin cannot be demoted to Member.');
     }
   }
 
@@ -583,8 +583,8 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
 router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
   const data = z.object({ rank: z.enum(['HANGAROUND', 'YOUNGBOYS', 'HOODBOYS', 'HOOD_PRESIDENT', 'SHOOT_CALLER', 'UNDER_OG', 'OG']) }).parse(req.body ?? {});
   const target = await prisma.user.findUnique({ where: { id: req.params.id, deletedAt: null }, select: { id: true, username: true, role: true, rank: true } });
-  if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
-  if (target.rank === data.rank) return res.json({ user: target, message: 'Rank tidak berubah.' });
+  if (!target) throw new HttpError(404, 'User not found.');
+  if (target.rank === data.rank) return res.json({ user: target, message: 'Rank was not changed.' });
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({ where: { id: target.id }, data: { rank: data.rank }, select: { id: true, username: true, role: true, rank: true } });
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'USER_RANK_UPDATED', detail: 'Mengubah rank ' + target.username + ' dari ' + target.rank + ' menjadi ' + data.rank + '.' } });
@@ -596,9 +596,9 @@ router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
 router.patch('/users/:id/status', asyncHandler(async (req, res) => {
   const data = z.object({ isActive: z.boolean() }).parse(req.body ?? {});
   const target = await prisma.user.findUnique({ where: { id: req.params.id, deletedAt: null }, select: { id: true, username: true, role: true, isActive: true, registrationStatus: true } });
-  if (!target) throw new HttpError(404, 'Pengguna tidak ditemukan.');
-  if (target.role !== 'USER') throw new HttpError(403, 'Status akun admin tidak dapat diubah dari menu ini.');
-  if (target.registrationStatus !== 'APPROVED') throw new HttpError(409, 'Pendaftaran harus disetujui terlebih dahulu sebelum status akun diubah.');
+  if (!target) throw new HttpError(404, 'User not found.');
+  if (target.role !== 'USER') throw new HttpError(403, 'Administrator account status cannot be changed from this menu.');
+  if (target.registrationStatus !== 'APPROVED') throw new HttpError(409, 'Registration must be approved before changing the account status.');
   if (target.isActive === data.isActive) return res.json({ user: target, message: 'Status akun tidak berubah.' });
   if (!data.isActive) {
     const openOrders = await prisma.order.count({ where: { userId: target.id, status: { in: ['PENDING', 'APPROVED'] } } });
@@ -768,10 +768,10 @@ router.post('/notes', asyncHandler(async (req, res) => {
 
 router.patch('/notes/:id', asyncHandler(async (req, res) => {
   const data = manualNoteSchema.partial().parse(req.body);
-  if (!Object.keys(data).length) throw new HttpError(400, 'Tidak ada perubahan catatan yang dikirim.');
+  if (!Object.keys(data).length) throw new HttpError(400, 'No note changes were submitted.');
   const note = await prisma.$transaction(async (tx) => {
     const current = await tx.manualNote.findUnique({ where: { id: req.params.id } });
-    if (!current) throw new HttpError(404, 'Catatan tidak ditemukan.');
+    if (!current) throw new HttpError(404, 'Note not found.');
     const updated = await tx.manualNote.update({
       where: { id: current.id },
       data,
@@ -792,7 +792,7 @@ router.patch('/notes/:id', asyncHandler(async (req, res) => {
 router.delete('/notes/:id', asyncHandler(async (req, res) => {
   const deleted = await prisma.$transaction(async (tx) => {
     const current = await tx.manualNote.findUnique({ where: { id: req.params.id } });
-    if (!current) throw new HttpError(404, 'Catatan tidak ditemukan.');
+    if (!current) throw new HttpError(404, 'Note not found.');
     await tx.manualNote.delete({ where: { id: current.id } });
     await tx.activityLog.create({
       data: {
