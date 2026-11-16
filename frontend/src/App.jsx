@@ -19,7 +19,7 @@ const MEMBER_RANKS = [
   { value: 'YOUNGBOYS', label: 'YoungBoys' },
   { value: 'HANGAROUND', label: 'Hangaround' },
 ];
-const AUTO_SYNC_INTERVAL_MS = 60000;
+const AUTO_SYNC_INTERVAL_MS = 120000;
 
 function readPageFromUrl() {
   try {
@@ -1284,30 +1284,9 @@ export default function App() {
     });
   }, [user?.id, user?.role, page, loadPageData]);
 
-  useEffect(() => {
-    // Warm only the two most commonly visited pages after the dashboard is ready.
-    // Avoid loading every admin/member page at startup: that creates unnecessary
-    // API and database traffic, especially when many members sign in together.
-    if (!user || page !== 'dashboard' || !loadedPages[currentPageKey]) return undefined;
-    let cancelled = false;
-    const commonPages = user.role === 'ADMIN'
-      ? ['catalog', 'admin-orders']
-      : ['catalog', 'my-orders'];
-
-    const prefetchCommonPages = async () => {
-      if (cancelled || document.visibilityState !== 'visible') return;
-      await Promise.allSettled(
-        commonPages.map((targetPage) => loadPageData(targetPage, user.role, false))
-      );
-    };
-
-    // Give the first screen and its network requests priority.
-    const timer = window.setTimeout(prefetchCommonPages, 2000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [user?.id, user?.role, page, currentPageKey, loadedPages[currentPageKey], loadPageData]);
+  // Page data is loaded on demand and kept in the in-memory page cache.
+  // Avoid background prefetches that duplicate dashboard data and compete
+  // with the first screen for database connections.
 
   useEffect(() => {
     if (!user) return undefined;
