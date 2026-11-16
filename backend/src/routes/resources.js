@@ -259,7 +259,7 @@ router.delete('/:id/image', requireAdmin, asyncHandler(async (req, res) => {
     return resource;
   });
   await removeStoredImage(current.imageUrl);
-  res.json({ resource: serializeResource(updated) });
+  res.json({ resource: await serializeResourceWithImage(updated) });
 }));
 
 router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
@@ -288,7 +288,7 @@ router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
     return updated;
   });
 
-  res.json({ resource: serializeResource(resource) });
+  res.json({ resource: await serializeResourceWithImage(resource) });
 }));
 
 router.patch('/:id/stock', requireAdmin, asyncHandler(async (req, res) => {
