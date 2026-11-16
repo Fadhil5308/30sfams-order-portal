@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, Archive, ArrowDownToLine, ArrowUpRight, Bell, Boxes, ChartNoAxesCombined,
   Check, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardList, Clock3,
-  Command, Database, FileText, History, LayoutDashboard, LogOut, Menu, Package,
+  Command, Database, FileText, History, LayoutOverview, LogOut, Menu, Package,
   PackagePlus, Printer, Search, ShieldCheck, ShoppingCart, SlidersHorizontal,
-  Sparkles, Trash2, Truck, Upload, UserRound, Users, UserPlus, UserX, CheckCheck, KeyRound, Pencil, X, XCircle, RotateCcw, Wallet, CalendarDays, Star, Repeat,
+  Sparkles, Trash2, Truck, Upload, MemberRound, Members, MemberPlus, MemberX, CheckCheck, KeyRound, Pencil, X, XCircle, RotateCcw, Wallet, CalendarDays, Star, Repeat,
 } from 'lucide-react';
 import { api, assetUrl, categoryLabel, dateTime, money, number, statusLabel, uploadFile } from './api';
 
@@ -38,7 +38,7 @@ function Notice({ notice, clear }) {
   return <div className={`notice ${notice.type}`} role="status">
     {notice.type === 'error' ? <XCircle size={17} /> : <CheckCircle2 size={17} />}
     <span>{notice.message}</span>
-    <button className="icon-button notice-close" onClick={clear} aria-label="Tutup"><X size={15} /></button>
+    <button className="icon-button notice-close" onClick={clear} aria-label="Close"><X size={15} /></button>
   </div>;
 }
 
@@ -53,7 +53,7 @@ function AuthScreen({ onAuthenticated, setNotice }) {
     try {
       const result = await api('/auth/login', { method: 'POST', body: JSON.stringify({ identifier: loginForm.identifier, password: loginForm.password }) });
       onAuthenticated(result.user);
-      setNotice({ type: 'success', message: 'Berhasil masuk ke 30sFams Order Portal.' });
+      setNotice({ type: 'success', message: 'You have successfully signed in to 30sFams Order Portal.' });
     } catch (error) { setNotice({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -61,7 +61,7 @@ function AuthScreen({ onAuthenticated, setNotice }) {
   async function submitRegistration(event) {
     event.preventDefault();
     if (registerForm.password !== registerForm.confirmPassword) {
-      setNotice({ type: 'error', message: 'Konfirmasi password belum sama.' }); return;
+      setNotice({ type: 'error', message: 'Password confirmation does not match.' }); return;
     }
     setBusy(true);
     try {
@@ -77,36 +77,36 @@ function AuthScreen({ onAuthenticated, setNotice }) {
     <div className="auth-visual">
       <div className="auth-brand"><BrandLogo className="auth-brand-logo" /><span>30s<span className="brand-accent">FAMS</span></span></div>
       <div className="auth-copy">
-        <div className="eyebrow"><span className="live-dot" /> 30SFAMS · RESOURCE ORDER PORTAL</div>
+        <div className="eyebrow"><span className="live-dot" /> 30SFAMS · Resource ORDER PORTAL</div>
         <h1>One family.<br /><span>One supply.</span></h1>
-        <p>Portal pemesanan internal 30sFams untuk mengelola resource, memantau stok, dan mencatat setiap transaksi.</p>
+        <p>The internal 30sFams portal for managing resources, monitoring inventory, and tracking every transaction.</p>
         <div className="auth-feature-list">
-          <div><ShieldCheck size={18} /><span>Akun anggota diverifikasi admin</span></div>
-          <div><Package size={18} /><span>Stok dan reservasi real-time</span></div>
-          <div><ChartNoAxesCombined size={18} /><span>Laporan pembelanjaan dan kas gang</span></div>
+          <div><ShieldCheck size={18} /><span>Member accounts are reviewed by an admin</span></div>
+          <div><Package size={18} /><span>Real-time stock and reservations</span></div>
+          <div><ChartNoAxesCombined size={18} /><span>Spending and gang fund reports</span></div>
         </div>
       </div>
-      <div className="auth-visual-footer"><span>RESOURCE MANAGEMENT SYSTEM</span><span>30SFAMS</span></div>
+      <div className="auth-visual-footer"><span>Resource MANAGEMENT SYSTEM</span><span>30SFAMS</span></div>
     </div>
     <div className="auth-panel">
       <div className="auth-panel-top"><span>30SFAMS <span className="muted">/ MEMBER ACCESS</span></span><span className="secure-label"><ShieldCheck size={14} /> SECURE ACCESS</span></div>
       <div className="auth-form-wrap">
-        <div className="auth-heading"><span className="section-kicker">{mode === 'login' ? 'WELCOME BACK' : 'JOIN 30SFAMS'}</span><h2>{mode === 'login' ? 'Masuk ke akun' : 'Daftar anggota'}</h2><p>{mode === 'login' ? 'Masukkan username atau email dan password akun kamu.' : 'Buat akun anggota. Akun akan aktif setelah disetujui admin 30sFams.'}</p></div>
+        <div className="auth-heading"><span className="section-kicker">{mode === 'login' ? 'WELCOME BACK' : 'JOIN 30SFAMS'}</span><h2>{mode === 'login' ? 'Sign in to your account' : 'Create a member account'}</h2><p>{mode === 'login' ? 'Enter your username or email and password.' : 'Create a member account. Your account will be activated after approval by a 30sFams admin.'}</p></div>
         {mode === 'login' ? <form onSubmit={submitLogin} className="form-stack">
-          <label>Username atau email<input required value={loginForm.identifier} onChange={(event) => setLoginForm({ ...loginForm, identifier: event.target.value })} placeholder="Masukkan username atau email" autoComplete="username" /></label>
-          <label>Password<input required type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} placeholder="Masukkan password" autoComplete="current-password" /></label>
-          <button className="button button-primary button-full" disabled={busy}>{busy ? 'Memproses...' : 'Masuk ke dashboard'} <ArrowUpRight size={17} /></button>
+          <label>Membername or email<input required value={loginForm.identifier} onChange={(event) => setLoginForm({ ...loginForm, identifier: event.target.value })} placeholder="Enter your username or email" autoComplete="username" /></label>
+          <label>Password<input required type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} placeholder="Enter your password" autoComplete="current-password" /></label>
+          <button className="button button-primary button-full" disabled={busy}>{busy ? 'Processing...' : 'Sign in to dashboard'} <ArrowUpRight size={17} /></button>
         </form> : <form onSubmit={submitRegistration} className="form-stack">
-          <label>Username<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={registerForm.username} onChange={(event) => setRegisterForm({ ...registerForm, username: event.target.value })} placeholder="Contoh: member30s" autoComplete="username" /></label>
-          <label>Email<input required type="email" maxLength={150} value={registerForm.email} onChange={(event) => setRegisterForm({ ...registerForm, email: event.target.value })} placeholder="nama@email.com" autoComplete="email" /></label>
-          <label>Password<input required type="password" minLength={12} maxLength={100} value={registerForm.password} onChange={(event) => setRegisterForm({ ...registerForm, password: event.target.value })} placeholder="Minimal 12 karakter" autoComplete="new-password" /></label>
-          <label>Konfirmasi password<input required type="password" minLength={12} maxLength={100} value={registerForm.confirmPassword} onChange={(event) => setRegisterForm({ ...registerForm, confirmPassword: event.target.value })} placeholder="Ulangi password" autoComplete="new-password" /></label>
-          <button className="button button-primary button-full" disabled={busy || registerForm.password !== registerForm.confirmPassword}>{busy ? 'Mengirim pendaftaran...' : 'Kirim pendaftaran'} <ArrowUpRight size={17} /></button>
-          <div className="form-hint"><ShieldCheck size={14} /> Akun baru berstatus menunggu dan tidak dapat login sebelum disetujui admin.</div>
+          <label>Membername<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={registerForm.username} onChange={(event) => setRegisterForm({ ...registerForm, username: event.target.value })} placeholder="Example: member30s" autoComplete="username" /></label>
+          <label>Email<input required type="email" maxLength={150} value={registerForm.email} onChange={(event) => setRegisterForm({ ...registerForm, email: event.target.value })} placeholder="name@email.com" autoComplete="email" /></label>
+          <label>Password<input required type="password" minLength={12} maxLength={100} value={registerForm.password} onChange={(event) => setRegisterForm({ ...registerForm, password: event.target.value })} placeholder="At least 12 characters" autoComplete="new-password" /></label>
+          <label>Confirm password<input required type="password" minLength={12} maxLength={100} value={registerForm.confirmPassword} onChange={(event) => setRegisterForm({ ...registerForm, confirmPassword: event.target.value })} placeholder="Re-enter password" autoComplete="new-password" /></label>
+          <button className="button button-primary button-full" disabled={busy || registerForm.password !== registerForm.confirmPassword}>{busy ? 'Submitting registration...' : 'Submit registration'} <ArrowUpRight size={17} /></button>
+          <div className="form-hint"><ShieldCheck size={14} /> New accounts remain pending and cannot sign in until approved by an admin.</div>
         </form>}
-        <div className="auth-mode-switch">{mode === 'login' ? <>Belum punya akun? <button type="button" className="text-button" onClick={() => setMode('register')}>Daftar sekarang</button></> : <>Sudah punya akun? <button type="button" className="text-button" onClick={() => setMode('login')}>Kembali ke login</button></>}</div>
+        <div className="auth-mode-switch">{mode === 'login' ? <>Don’t have an account? <button type="button" className="text-button" onClick={() => setMode('register')}>Sign up now</button></> : <>Already have an account? <button type="button" className="text-button" onClick={() => setMode('login')}>Back to sign in</button></>}</div>
       </div>
-      <div className="auth-panel-footer">Akses anggota 30sFams · Semua pendaftaran diperiksa oleh admin.</div>
+      <div className="auth-panel-footer">30sFams member access · All registrations are reviewed by an admin.</div>
     </div>
   </div>;
 }
@@ -114,17 +114,17 @@ function AuthScreen({ onAuthenticated, setNotice }) {
 function NotificationCenter({ notifications, unreadCount, onReadAll, onSelect }) {
   const [open, setOpen] = useState(false);
   return <div className="notification-center">
-    <button className="icon-button notification-button" title="Notifikasi" aria-label="Notifikasi" onClick={() => setOpen((value) => !value)}>
+    <button className="icon-button notification-button" title="Notifications" aria-label="Notifications" onClick={() => setOpen((value) => !value)}>
       <Bell size={18} />{unreadCount > 0 && <span className="notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </button>
     {open && <div className="notification-dropdown">
-      <div className="notification-dropdown-header"><div><strong>Notifikasi</strong><small>{unreadCount} belum dibaca</small></div><button className="text-button" disabled={!unreadCount} onClick={onReadAll}><CheckCheck size={14} /> Baca semua</button></div>
+      <div className="notification-dropdown-header"><div><strong>Notifications</strong><small>{unreadCount} unread</small></div><button className="text-button" disabled={!unreadCount} onClick={onReadAll}><CheckCheck size={14} /> Mark all as read</button></div>
       <div className="notification-list">
         {notifications.length ? notifications.map((item) => <button key={item.id} className={`notification-item ${item.isRead ? 'read' : 'unread'}`} onClick={() => { onSelect(item); setOpen(false); }}>
           <span className={`notification-item-icon ${item.type.toLowerCase()}`}><Bell size={15} /></span>
           <span className="notification-item-content"><strong>{item.title}</strong><span>{item.message}</span><small>{dateTime(item.createdAt)}{item.order?.orderNumber ? ` · ${item.order.orderNumber}` : ''}</small></span>
           {!item.isRead && <i className="notification-unread-dot" />}
-        </button>) : <EmptyState icon={Bell} title="Belum ada notifikasi" detail="Aktivitas pesanan akan muncul di sini." />}
+        </button>) : <EmptyState icon={Bell} title="No notifications yet" detail="Order activity will appear here." />}
       </div>
     </div>}
   </div>;
@@ -140,13 +140,13 @@ function ChangePasswordModal({ onClose, onSubmit, busy }) {
   }
   return <div className="order-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="change-password-modal" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
-      <div className="panel-heading"><div><span className="section-kicker">ACCOUNT SECURITY</span><h3 id="change-password-title">Ganti password</h3><p>Gunakan password baru minimal 12 karakter.</p></div><button className="icon-button" onClick={onClose} aria-label="Tutup"><X size={18}/></button></div>
+      <div className="panel-heading"><div><span className="section-kicker">ACCOUNT SECURITY</span><h3 id="change-password-title">Change password</h3><p>Use a new password with at least 12 characters.</p></div><button className="icon-button" onClick={onClose} aria-label="Close"><X size={18}/></button></div>
       <form className="form-stack change-password-form" onSubmit={submit}>
-        <label>Password saat ini<input required type="password" autoComplete="current-password" value={draft.currentPassword} onChange={(event) => setDraft({ ...draft, currentPassword: event.target.value })}/></label>
-        <label>Password baru<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.newPassword} onChange={(event) => setDraft({ ...draft, newPassword: event.target.value })}/></label>
-        <label>Konfirmasi password baru<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.confirmPassword} onChange={(event) => setDraft({ ...draft, confirmPassword: event.target.value })}/></label>
-        {draft.confirmPassword && draft.newPassword !== draft.confirmPassword && <small className="password-mismatch">Konfirmasi password belum sama.</small>}
-        <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose}>Batal</button><button className="button button-primary" disabled={busy || draft.newPassword !== draft.confirmPassword || draft.newPassword.length < 12}><KeyRound size={15}/> Simpan password</button></div>
+        <label>Current password<input required type="password" autoComplete="current-password" value={draft.currentPassword} onChange={(event) => setDraft({ ...draft, currentPassword: event.target.value })}/></label>
+        <label>New password<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.newPassword} onChange={(event) => setDraft({ ...draft, newPassword: event.target.value })}/></label>
+        <label>Confirm password baru<input required type="password" minLength={12} maxLength={100} autoComplete="new-password" value={draft.confirmPassword} onChange={(event) => setDraft({ ...draft, confirmPassword: event.target.value })}/></label>
+        {draft.confirmPassword && draft.newPassword !== draft.confirmPassword && <small className="password-mismatch">Password confirmation does not match.</small>}
+        <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose}>Cancel</button><button className="button button-primary" disabled={busy || draft.newPassword !== draft.confirmPassword || draft.newPassword.length < 12}><KeyRound size={15}/> Save password</button></div>
       </form>
     </section>
   </div>;
@@ -182,21 +182,21 @@ function EditResourceModal({ resource, onClose, onSave, busy }) {
   return <div className="order-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
     <section className="change-password-modal edit-resource-modal" role="dialog" aria-modal="true" aria-labelledby="edit-resource-title">
       <div className="panel-heading">
-        <div><span className="section-kicker">INVENTORY CONTROL</span><h3 id="edit-resource-title">Edit data resource</h3><p>Perbarui informasi <strong>{resource.name}</strong>. Perubahan ini tidak mengubah stok tersedia atau stok yang dicadangkan.</p></div>
-        <button type="button" className="icon-button" onClick={onClose} disabled={busy} aria-label="Tutup"><X size={18}/></button>
+        <div><span className="section-kicker">INVENTORY CONTROL</span><h3 id="edit-resource-title">Edit resource details</h3><p>Update information <strong>{resource.name}</strong>. These changes will not affect available or reserved stock.</p></div>
+        <button type="button" className="icon-button" onClick={onClose} disabled={busy} aria-label="Close"><X size={18}/></button>
       </div>
       <form className="form-stack change-password-form" onSubmit={submit}>
         <div className="form-grid edit-resource-grid">
-          <label>Nama resource<input required minLength={2} maxLength={100} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Nama resource" /></label>
-          <label>SKU / kode unik<input required minLength={2} maxLength={40} pattern="[A-Za-z0-9_-]+" value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value.toUpperCase() })} placeholder="WPN-001" /></label>
-          <label>Kategori<select required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{CATEGORIES.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select></label>
-          <label>Satuan<input required maxLength={24} value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} placeholder="unit / pcs / pack" /></label>
-          <label>Harga per satuan (USD)<input required type="number" min="0" max="1000000000" step="0.01" value={draft.unitPrice} onChange={(event) => setDraft({ ...draft, unitPrice: event.target.value })} /></label>
-          <label>Batas minimum stok<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(event) => setDraft({ ...draft, minStock: event.target.value })} /><small className="field-hint">Peringatan muncul ketika stok tersedia mencapai batas ini. Isi 0 untuk menonaktifkan batas.</small></label>
-          <label className="span-two">Deskripsi<input maxLength={500} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Deskripsi singkat resource" /></label>
+          <label>Resource name<input required minLength={2} maxLength={100} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Resource name" /></label>
+          <label>SKU / unique code<input required minLength={2} maxLength={40} pattern="[A-Za-z0-9_-]+" value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value.toUpperCase() })} placeholder="WPN-001" /></label>
+          <label>Category<select required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{CATEGORIES.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select></label>
+          <label>Unit<input required maxLength={24} value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} placeholder="unit / pcs / pack" /></label>
+          <label>Unit price (USD)<input required type="number" min="0" max="1000000000" step="0.01" value={draft.unitPrice} onChange={(event) => setDraft({ ...draft, unitPrice: event.target.value })} /></label>
+          <label>Minimum stock threshold<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(event) => setDraft({ ...draft, minStock: event.target.value })} /><small className="field-hint">An alert appears when available stock reaches this threshold. Enter 0 to disable the threshold.</small></label>
+          <label className="span-two">Description<input maxLength={500} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Description singkat resource" /></label>
         </div>
-        <div className="edit-resource-note"><ShieldCheck size={15}/><span>Jumlah stok hanya dapat diubah melalui tombol <strong>Atur stok</strong> agar perubahannya masuk ke riwayat inventory.</span></div>
-        <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose} disabled={busy}>Batal</button><button className="button button-primary" disabled={busy || !draft.name.trim() || !draft.sku.trim() || !draft.unit.trim() || !Number.isFinite(Number(draft.unitPrice)) || Number(draft.unitPrice) < 0}><Check size={15}/> {busy ? 'Menyimpan...' : 'Simpan perubahan'}</button></div>
+        <div className="edit-resource-note"><ShieldCheck size={15}/><span>Stock quantities can only be changed using the <strong>Adjust stock</strong> so changes are recorded in inventory history.</span></div>
+        <div className="form-footer"><button type="button" className="button button-ghost" onClick={onClose} disabled={busy}>Cancel</button><button className="button button-primary" disabled={busy || !draft.name.trim() || !draft.sku.trim() || !draft.unit.trim() || !Number.isFinite(Number(draft.unitPrice)) || Number(draft.unitPrice) < 0}><Check size={15}/> {busy ? 'Saving...' : 'Save changes'}</button></div>
       </form>
     </section>
   </div>;
@@ -218,14 +218,14 @@ function SectionHeader({ eyebrow, title, description, action }) {
   return <div className="section-header"><div><div className="section-kicker">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action}</div>;
 }
 
-function Dashboard({ user, resources = [], orders = [], reports, dashboardData, goTo }) {
-  const isAdmin = user.role === 'ADMIN';
+function Overview({ user, resources = [], orders = [], reports, dashboardData, goTo }) {
+  const isSuper Admin = user.role === 'ADMIN';
   const pending = orders.filter((order) => order.status === 'PENDING').length;
   const completed = orders.filter((order) => order.status === 'COMPLETED');
   const completedQty = completed.reduce((sum, order) => sum + order.totalQuantity, 0);
   const completedAmount = completed.reduce((sum, order) => sum + order.totalAmount, 0);
 
-  if (isAdmin) {
+  if (isSuper Admin) {
     const summary = dashboardData?.summary || reports?.summary || {};
     const stock = dashboardData?.stock || {};
     const byCategory = stock.byCategory || {};
@@ -244,36 +244,36 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
     const lowStockCount = Number(summary.lowStockResources ?? lowStockResources.length);
 
     return <>
-      <SectionHeader eyebrow="ADMIN OVERVIEW" title={`Selamat datang, ${user.username}`} description="Pantau inventory, permintaan, dan aktivitas resource server." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}</div>} />
+      <SectionHeader eyebrow="ADMIN OVERVIEW" title={`Welcome, ${user.username}`} description="Monitor inventory, requests, and server resource activity." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date())}</div>} />
       <div className="stats-grid">
-        <StatCard label="Total jenis resource" value={number(summary.activeResources ?? catalogResources.length)} detail="Resource aktif" icon={Boxes} tone="blue" />
-        <StatCard label="Stok tersedia" value={number(totalAvailable)} detail={`${number(totalReserved)} unit sedang dicadangkan`} icon={Package} tone="green" />
-        <StatCard label="Pesanan menunggu" value={number(summary.pendingOrders ?? pending)} detail="Perlu ditinjau admin" icon={ClipboardList} tone="orange" />
-        <StatCard label="Total nilai selesai" value={money(summary.completedAmount ?? completedAmount)} detail={`${number(summary.completedQuantity ?? completedQty)} unit terjual`} icon={CircleDollarSign} tone="purple" />
+        <StatCard label="Total resource types" value={number(summary.activeResources ?? catalogResources.length)} detail="Active resources" icon={Boxes} tone="blue" />
+        <StatCard label="Available stock" value={number(totalAvailable)} detail={`${number(totalReserved)} units currently reserved`} icon={Package} tone="green" />
+        <StatCard label="Pending orders" value={number(summary.pendingOrders ?? pending)} detail="Awaiting admin review" icon={ClipboardList} tone="orange" />
+        <StatCard label="Total completed value" value={money(summary.completedAmount ?? completedAmount)} detail={`${number(summary.completedQuantity ?? completedQty)} units sold`} icon={CircleDollarSign} tone="purple" />
       </div>
       <div className="order-status-summary">
         <button className="order-status-card pending" onClick={() => goTo('admin-orders')}>
-          <span>Pending</span><strong>{number(pendingCount)}</strong><small>Menunggu persetujuan</small>
+          <span>Pending</span><strong>{number(pendingCount)}</strong><small>Awaiting approval</small>
         </button>
         <button className="order-status-card approved" onClick={() => goTo('admin-orders')}>
-          <span>Approved</span><strong>{number(approvedCount)}</strong><small>Menunggu penyerahan</small>
+          <span>Approved</span><strong>{number(approvedCount)}</strong><small>Awaiting handover</small>
         </button>
         <button className="order-status-card completed" onClick={() => goTo('admin-orders')}>
-          <span>Completed</span><strong>{number(completedCount)}</strong><small>Transaksi selesai</small>
+          <span>Completed</span><strong>{number(completedCount)}</strong><small>Transactions completed</small>
         </button>
       </div>
       <div className="dashboard-grid">
-        <div className="panel"><div className="panel-heading"><div><h3>Pesanan terbaru</h3><p>Permintaan resource yang masuk</p></div><button className="text-button" onClick={() => goTo('admin-orders')}>Lihat semua <ArrowUpRight size={15} /></button></div>
-          {recentOrders.slice(0, 5).length ? <div className="compact-list">{recentOrders.slice(0, 5).map((order) => <div className="compact-row" key={order.id || order.orderNumber}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'User'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="Belum ada pesanan" detail="Pesanan pengguna akan muncul di sini." />}
+        <div className="panel"><div className="panel-heading"><div><h3>Recent orders</h3><p>Incoming resource requests</p></div><button className="text-button" onClick={() => goTo('admin-orders')}>View all <ArrowUpRight size={15} /></button></div>
+          {recentOrders.slice(0, 5).length ? <div className="compact-list">{recentOrders.slice(0, 5).map((order) => <div className="compact-row" key={order.id || order.orderNumber}><div className="item-symbol"><ClipboardList size={17} /></div><div className="compact-main"><strong>{order.orderNumber}</strong><span>{order.user?.username || 'Member'} · {number(order.totalQuantity)} unit</span></div><div className="compact-side"><StatusPill status={order.status} /><span>{money(order.totalAmount)}</span></div></div>)}</div> : <EmptyState icon={ClipboardList} title="No orders yet" detail="Member orders will appear here." />}
         </div>
-        <div className="panel"><div className="panel-heading"><div><h3>Stok per kategori</h3><p>Jumlah stok tersedia saat ini</p></div><button className="icon-button" onClick={() => goTo('inventory')} aria-label="Buka inventory"><ArrowUpRight size={17} /></button></div>
+        <div className="panel"><div className="panel-heading"><div><h3>Stock by category</h3><p>Current available stock</p></div><button className="icon-button" onClick={() => goTo('inventory')} aria-label="Buka inventory"><ArrowUpRight size={17} /></button></div>
           <div className="category-stock">{CATEGORIES.map((category, index) => { const qty = categoryValues[index]; return <div className="category-stock-row" key={category}><div><span>{categoryLabel(category)}</span><strong>{number(qty)}</strong></div><div className="progress-track"><span style={{ width: `${Math.max(3, qty / maxCategoryStock * 100)}%` }} /></div></div>; })}</div>
         </div>
       </div>
       <div className="panel low-stock-panel">
         <div className="panel-heading">
-          <div><h3><AlertTriangle size={15} /> Perhatian stok</h3><p>{lowStockCount ? `${number(lowStockCount)} resource perlu diperiksa` : 'Semua resource berada di atas batas minimum'}</p></div>
-          <button className="text-button" onClick={() => goTo('inventory')}>Buka manajemen stok <ArrowUpRight size={15} /></button>
+          <div><h3><AlertTriangle size={15} /> Stock alerts</h3><p>{lowStockCount ? `${number(lowStockCount)} resources need attention` : 'All resources are above their minimum stock threshold'}</p></div>
+          <button className="text-button" onClick={() => goTo('inventory')}>Open inventory management <ArrowUpRight size={15} /></button>
         </div>
         {lowStockResources.length ? <div className="low-stock-list">
           {lowStockResources.map((resource) => {
@@ -281,11 +281,11 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
             return <div className="low-stock-row" key={resource.id}>
               <div><strong>{resource.name}</strong><small>{resource.sku} · {categoryLabel(resource.category)}</small></div>
               <div className="low-stock-quantity"><strong>{number(resource.stockAvailable)} / {number(resource.minStock)}</strong><span>{resource.unit}</span></div>
-              <span className={`stock-tag ${isEmpty ? 'out-stock' : 'low-stock'}`}>{isEmpty ? 'Stok habis' : 'Stok menipis'}</span>
+              <span className={`stock-tag ${isEmpty ? 'out-stock' : 'low-stock'}`}>{isEmpty ? 'Out of stock' : 'Low stock'}</span>
             </div>;
           })}
-          {lowStockCount > lowStockResources.length && <p className="low-stock-more">+ {number(lowStockCount - lowStockResources.length)} resource lainnya perlu diperiksa</p>}
-        </div> : <div className="low-stock-empty"><CheckCircle2 size={18} /> Tidak ada resource yang berada di bawah batas minimum.</div>}
+          {lowStockCount > lowStockResources.length && <p className="low-stock-more">+ {number(lowStockCount - lowStockResources.length)} more resources need attention</p>}
+        </div> : <div className="low-stock-empty"><CheckCircle2 size={18} /> No resources are below their minimum stock threshold.</div>}
       </div>
     </>;
   }
@@ -293,19 +293,19 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
   const totalAvailable = resources.reduce((sum, resource) => sum + resource.stockAvailable, 0);
   const totalReserved = resources.reduce((sum, resource) => sum + resource.stockReserved, 0);
   return <>
-    <SectionHeader eyebrow="PERSONAL OVERVIEW" title={`Selamat datang, ${user.username}`} description="Ringkasan resource dan aktivitas pemesanan akun Anda." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}</div>} />
+    <SectionHeader eyebrow="PERSONAL OVERVIEW" title={`Welcome, ${user.username}`} description="A summary of your resources and account order activity." action={<div className="date-chip"><Clock3 size={15} /> {new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date())}</div>} />
     <div className="stats-grid">
-      <StatCard label="Resource tersedia" value={number(resources.length)} detail="Jenis item dalam katalog" icon={Boxes} tone="blue" />
-      <StatCard label="Pesanan menunggu" value={number(pending)} detail="Menunggu persetujuan admin" icon={Clock3} tone="orange" />
-      <StatCard label="Unit selesai dibeli" value={number(completedQty)} detail="Akumulasi pesanan selesai" icon={Package} tone="green" />
-      <StatCard label="Total nominal pembelian" value={money(completedAmount)} detail="Hanya pesanan selesai" icon={CircleDollarSign} tone="purple" />
+      <StatCard label="Available resources" value={number(resources.length)} detail="Item types in the catalog" icon={Boxes} tone="blue" />
+      <StatCard label="Pending orders" value={number(pending)} detail="Awaiting approval admin" icon={Clock3} tone="orange" />
+      <StatCard label="Completed units purchased" value={number(completedQty)} detail="Total completed orders" icon={Package} tone="green" />
+      <StatCard label="Total purchase value" value={money(completedAmount)} detail="Completed orders only" icon={CircleDollarSign} tone="purple" />
     </div>
-    <div className="panel"><div className="panel-heading"><div><h3>Riwayat pesanan terbaru</h3><p>Status pesanan dari akun Anda</p></div><button className="text-button" onClick={() => goTo('my-orders')}>Lihat semua <ArrowUpRight size={15} /></button></div>
-      {orders.slice(0, 6).length ? <div className="table-wrap"><table><thead><tr><th>Nomor pesanan</th><th>Tanggal</th><th>Jumlah</th><th>Total nominal</th><th>Status</th></tr></thead><tbody>{orders.slice(0, 6).map((order) => <tr key={order.id}><td className="strong-cell">{order.orderNumber}</td><td>{dateTime(order.createdAt)}</td><td>{number(order.totalQuantity)} unit</td><td>{money(order.totalAmount)}</td><td><StatusPill status={order.status} /></td></tr>)}</tbody></table></div> : <EmptyState icon={ShoppingCart} title="Belum ada transaksi" detail="Pilih resource dari katalog untuk membuat pesanan pertama." />}
+    <div className="panel"><div className="panel-heading"><div><h3>Recent order history</h3><p>Order status for your account</p></div><button className="text-button" onClick={() => goTo('my-orders')}>View all <ArrowUpRight size={15} /></button></div>
+      {orders.slice(0, 6).length ? <div className="table-wrap"><table><thead><tr><th>Order number</th><th>Date</th><th>Quantity</th><th>Total amount</th><th>Status</th></tr></thead><tbody>{orders.slice(0, 6).map((order) => <tr key={order.id}><td className="strong-cell">{order.orderNumber}</td><td>{dateTime(order.createdAt)}</td><td>{number(order.totalQuantity)} unit</td><td>{money(order.totalAmount)}</td><td><StatusPill status={order.status} /></td></tr>)}</tbody></table></div> : <EmptyState icon={ShoppingCart} title="No transactions yet" detail="Choose a resource from the catalog to place your first order." />}
     </div>
   </>;
 }
-function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false, showFavorites = true, isAdminMode = false }) {
+function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false, showFavorites = true, isSuper AdminMode = false }) {
   const [orderNotes, setOrderNotes] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 18;
@@ -347,8 +347,8 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
     });
   }
   return <>
-    <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Resource favorit' : 'Pilih resource'} description={favoriteOnly ? 'Daftar resource favorit yang kamu simpan untuk pemesanan berikutnya.' : isAdminMode ? 'Pilih resource untuk kebutuhan akun Super Admin. Pesanan tercatat atas nama akun ini dan tetap masuk ke daftar Semua Pesanan.' : 'Temukan item yang dibutuhkan, tentukan jumlah, lalu kirim pesanan untuk ditinjau admin.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
-    <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama resource atau SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">Semua kategori</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
+    <SectionHeader eyebrow={favoriteOnly ? 'SAVED ResourceS' : 'Resource CATALOG'} title={favoriteOnly ? 'Favorite resources' : 'Browse resources'} description={favoriteOnly ? 'Your saved favorite resources for future orders.' : isSuper AdminMode ? 'Browse resources untuk kebutuhan  account Super Super Admin. Orders tercatat atas nama  account ini dan tetap masuk ke daftar All Orders.' : 'Find the items you need, choose quantities, and submit your order for admin review.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} unit</span><strong>{money(cartTotal)}</strong></div>} />
+    <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource name or SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">All categories</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
     {filtered.length ? <><div className="resource-grid">{visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
         {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
@@ -356,12 +356,12 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
         {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
         <small>{resource.sku}</small>
       </div>
-      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'} aria-label={favoriteIds.includes(resource.id) ? 'Hapus dari favorit' : 'Simpan ke favorit'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'Tidak ada deskripsi untuk resource ini.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
-        <div className="resource-action"><div className="quantity-control"><button type="button" onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} disabled={!cart[resource.id] || busy} aria-label={`Kurangi jumlah ${resource.name}`}>−</button><input className="quantity-input" type="number" inputMode="numeric" min="0" max={resource.stockAvailable} step="1" value={cart[resource.id] || ''} placeholder="0" disabled={resource.stockAvailable <= 0 || busy} onChange={(event) => setCartQuantity(resource.id, event.target.value, resource.stockAvailable)} aria-label={`Jumlah ${resource.name}`} /><button type="button" onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={resource.stockAvailable <= 0 || busy || (cart[resource.id] || 0) >= resource.stockAvailable} aria-label={`Tambah jumlah ${resource.name}`}>+</button></div></div>
+      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'} aria-label={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'No description available for this resource.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+        <div className="resource-action"><div className="quantity-control"><button type="button" onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} disabled={!cart[resource.id] || busy} aria-label={`Kurangi jumlah ${resource.name}`}>−</button><input className="quantity-input" type="number" inputMode="numeric" min="0" max={resource.stockAvailable} step="1" value={cart[resource.id] || ''} placeholder="0" disabled={resource.stockAvailable <= 0 || busy} onChange={(event) => setCartQuantity(resource.id, event.target.value, resource.stockAvailable)} aria-label={`Quantity ${resource.name}`} /><button type="button" onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={resource.stockAvailable <= 0 || busy || (cart[resource.id] || 0) >= resource.stockAvailable} aria-label={`Tambah jumlah ${resource.name}`}>+</button></div></div>
       </div>
-    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={Search} title="Resource tidak ditemukan" detail="Coba ubah kata kunci atau filter kategori." />}
-    <div className="checkout-notes panel"><label htmlFor="order-notes"><span>Catatan untuk admin <small>(opsional, maksimal 500 karakter)</small></span><textarea id="order-notes" maxLength={500} rows={2} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Contoh: Mohon proses untuk kebutuhan event malam ini." /></label><div className="notes-counter">{orderNotes.length}/500 karakter</div></div>
-    <div className="order-cart-bar"><div><span className="cart-label">KERANJANG PESANAN</span><strong>{number(cartQty)} unit <span>·</span> {money(cartTotal)}</strong></div><button className="button button-primary" disabled={!cartQty || busy} onClick={() => submitOrder(orderNotes)}>{busy ? 'Mengirim...' : 'Kirim pesanan'} <ArrowUpRight size={16} /></button></div>
+    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={Search} title="No resources found" detail="Try changing your search term or category filter." />}
+    <div className="checkout-notes panel"><label htmlFor="order-notes"><span>Note for admin <small>(optional, up to 500 characters)</small></span><textarea id="order-notes" maxLength={500} rows={2} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Example: Please process this for tonight’s event." /></label><div className="notes-counter">{orderNotes.length}/500 characters</div></div>
+    <div className="order-cart-bar"><div><span className="cart-label">ORDER CART</span><strong>{number(cartQty)} unit <span>·</span> {money(cartTotal)}</strong></div><button className="button button-primary" disabled={!cartQty || busy} onClick={() => submitOrder(orderNotes)}>{busy ? 'Submitting...' : 'Submit order'} <ArrowUpRight size={16} /></button></div>
   </>;
 }
 
@@ -371,66 +371,66 @@ function DataPagination({ page, pageSize = 25, total, onPageChange }) {
   const firstItem = (page - 1) * pageSize + 1;
   const lastItem = Math.min(total, page * pageSize);
   return <div className="table-pagination">
-    <span>Menampilkan {number(firstItem)}–{number(lastItem)} dari {number(total)}</span>
+    <span>Showing {number(firstItem)}–{number(lastItem)} of {number(total)}</span>
     <div>
-      <button type="button" className="button button-small button-ghost" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Sebelumnya</button>
-      <span>Halaman {number(page)} / {number(totalPages)}</span>
-      <button type="button" className="button button-small button-ghost" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Berikutnya</button>
+      <button type="button" className="button button-small button-ghost" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</button>
+      <span>Page {number(page)} / {number(totalPages)}</span>
+      <button type="button" className="button button-small button-ghost" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</button>
     </div>
   </div>;
 }
 
-function OrderTable({ orders, isAdmin, onAction, onDetail, onRestore, onReorder, busy, readOnly = false, isArchived = false }) {
+function OrderTable({ orders, isSuper Admin, onAction, onDetails, onRestore, onReorder, busy, readOnly = false, isArchived = false }) {
   const [page, setPage] = useState(1);
   const pageSize = 25;
   const safeOrders = Array.isArray(orders) ? orders.filter(Boolean) : [];
   const pageOrders = safeOrders.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => setPage(1), [orders]);
-  if (!safeOrders.length) return <EmptyState icon={ClipboardList} title="Belum ada data pesanan" detail="Data pesanan akan tampil di halaman ini setelah ada transaksi." />;
-  return <><div className="table-wrap"><table><thead><tr>{isAdmin && <th>Pemesan</th>}<th>Nomor pesanan</th><th>Tanggal</th>{isArchived && <th>Diarsipkan</th>}<th>Resource</th><th>Jumlah</th><th>Total nominal</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
-    {isAdmin && <td><div className="user-cell"><div className="avatar-mini">{(order.user?.username || 'U').slice(0, 1).toUpperCase()}</div>{order.user?.username || '-'}</div></td>}
-    <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Catatan: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{(Array.isArray(order.items) ? order.items : []).map((item) => <span key={item.id || item.resourceId || item.resourceName}>{item.resourceName || 'Resource'}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
-    <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetail(order)}><FileText size={13} /> Detail</button>{isArchived && isAdmin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Pulihkan</button>}{!readOnly && isAdmin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Setujui"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Tolak"><X size={15} /></button></>}{!readOnly && isAdmin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Konfirmasi penyerahan langsung dan selesaikan"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Batalkan dan lepas stok"><X size={15} /></button></>}{!readOnly && !isAdmin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Batalkan</button>}{!readOnly && !isAdmin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Pesan ulang</button>}</div></td>
+  if (!safeOrders.length) return <EmptyState icon={ClipboardList} title="No order data yet" detail="Orders will appear on this page once a transaction has been placed." />;
+  return <><div className="table-wrap"><table><thead><tr>{isSuper Admin && <th>Ordered by</th>}<th>Order number</th><th>Date</th>{isArchived && <th>Archived</th>}<th>Resource</th><th>Quantity</th><th>Total amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageOrders.map((order) => <tr key={order.id}>
+    {isSuper Admin && <td><div className="user-cell"><div className="avatar-mini">{(order.user?.username || 'U').slice(0, 1).toUpperCase()}</div>{order.user?.username || '-'}</div></td>}
+    <td><span className="strong-cell">{order.orderNumber}</span>{order.notes && <small className="cell-sub">Note: {order.notes}</small>}</td><td>{dateTime(order.createdAt)}</td>{isArchived && <td>{dateTime(order.archivedAt)}</td>}<td><div className="resource-lines">{(Array.isArray(order.items) ? order.items : []).map((item) => <span key={item.id || item.resourceId || item.resourceName}>{item.resourceName || 'Resource'}</span>)}</div></td><td>{number(order.totalQuantity)} unit</td><td className="strong-cell">{money(order.totalAmount)}</td><td><StatusPill status={order.status} />{order.adminNotes && <small className="cell-sub">{order.adminNotes}</small>}</td>
+    <td><div className="table-actions"><button className="button button-small button-ghost" disabled={busy} onClick={() => onDetails(order)}><FileText size={13} /> Details</button>{isArchived && isSuper Admin && <button className="button button-small button-ghost" disabled={busy} onClick={() => onRestore(order)}><RotateCcw size={13} /> Restore</button>}{!readOnly && isSuper Admin && order.status === 'PENDING' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'approve')} title="Approve"><Check size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'reject')} title="Reject"><X size={15} /></button></>}{!readOnly && isSuper Admin && order.status === 'APPROVED' && <><button className="action-button approve" disabled={busy} onClick={() => onAction(order, 'complete')} title="Confirm handover and complete"><CheckCircle2 size={15} /></button><button className="action-button reject" disabled={busy} onClick={() => onAction(order, 'cancel')} title="Cancelkan dan lepas stok"><X size={15} /></button></>}{!readOnly && !isSuper Admin && order.status === 'PENDING' && <button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onAction(order, 'cancel')}>Cancelkan</button>}{!readOnly && !isSuper Admin && order.status === 'COMPLETED' && onReorder && <button className="button button-small button-outline" disabled={busy} onClick={() => onReorder(order)}><Repeat size={13}/> Reorder</button>}</div></td>
   </tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={orders.length} onPageChange={setPage} /></>;
 }
 
-function OrderDetailModal({ order, onClose, onPrint, isAdmin }) {
+function OrderDetailsModal({ order, onClose, onPrint, isSuper Admin }) {
   if (!order) return null;
   const history = order.statusHistory?.length ? order.statusHistory : [{
     id: 'legacy-history', fromStatus: null, toStatus: order.status,
-    note: 'Riwayat perubahan status sebelum fitur timeline diaktifkan belum tersedia.',
+    note: 'Status changes made before the timeline feature was enabled are unavailable.',
     createdAt: order.updatedAt || order.createdAt, changedBy: { username: 'System' },
   }];
   return <div className="order-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
-      <div className="order-detail-toolbar no-print"><div><span className="section-kicker">30SFAMS · ORDER RECORD</span><h2>Detail pesanan</h2></div><div className="modal-toolbar-actions"><button className="button button-outline" onClick={onPrint}><Printer size={15} /> Cetak / PDF</button><button className="icon-button" onClick={onClose} aria-label="Tutup detail"><X size={19} /></button></div></div>
+      <div className="order-detail-toolbar no-print"><div><span className="section-kicker">30SFAMS · ORDER RECORD</span><h2>Details pesanan</h2></div><div className="modal-toolbar-actions"><button className="button button-outline" onClick={onPrint}><Printer size={15} /> Print / PDF</button><button className="icon-button" onClick={onClose} aria-label="Close detail"><X size={19} /></button></div></div>
       <div className="invoice-sheet">
-        <header className="invoice-brand-row"><div className="invoice-brand"><img src="/30s-logo.png" alt="30sFams"/><div><strong>30sFAMS</strong><span>RESOURCE ORDER PORTAL</span></div></div><div className="invoice-status"><span>STATUS PESANAN</span><StatusPill status={order.status} /></div></header>
-        <div className="invoice-title-row"><div><span className="section-kicker">ORDER DETAIL / INVOICE</span><h2 id="order-detail-title">{order.orderNumber}</h2><p>Dibuat pada {dateTime(order.createdAt)}</p></div><div className="invoice-meta"><span>Nomor pesanan</span><strong>{order.orderNumber}</strong><span>Tanggal diperbarui</span><strong>{dateTime(order.updatedAt || order.createdAt)}</strong>{order.archivedAt && <><span>Tanggal arsip</span><strong>{dateTime(order.archivedAt)} · {order.archivedBy?.username || 'Admin'}</strong></>}</div></div>
-        <div className="invoice-customer-grid"><div><span className="invoice-label">PEMESAN</span><strong>{order.user?.username || 'Akun Anda'}</strong>{isAdmin && <small>{order.user?.email || '-'}</small>}</div><div><span className="invoice-label">JUMLAH ITEM</span><strong>{number(order.totalQuantity)} unit</strong><small>{number(order.items?.length || 0)} jenis resource</small></div></div>
-        <div className="invoice-section-title">Rincian resource</div>
-        <div className="table-wrap invoice-table-wrap"><table className="invoice-table"><thead><tr><th>Resource</th><th>Kategori</th><th>Qty</th><th>Harga satuan</th><th>Subtotal</th></tr></thead><tbody>{order.items?.map((item) => <tr key={item.id}><td><strong>{item.resourceName}</strong></td><td>{categoryLabel(item.category)}</td><td>{number(item.quantity)} {item.unit}</td><td>{money(item.unitPrice)}</td><td className="strong-cell">{money(item.lineTotal)}</td></tr>)}</tbody></table></div>
-        <div className="invoice-total-box"><div><span>Total kuantitas</span><strong>{number(order.totalQuantity)} unit</strong></div><div className="invoice-grand-total"><span>Total nominal</span><strong>{money(order.totalAmount)}</strong></div></div>
-        <div className="invoice-note-grid"><section><span className="invoice-label">CATATAN PEMESAN</span><p>{order.notes?.trim() || 'Tidak ada catatan dari pemesan.'}</p></section>{(isAdmin || order.adminNotes) && <section><span className="invoice-label">CATATAN ADMIN</span><p>{order.adminNotes?.trim() || 'Belum ada catatan admin.'}</p></section>}</div>
-        <section className="order-timeline"><div className="invoice-section-title"><History size={15}/> Riwayat status pesanan</div><div className="timeline-list">{history.map((event) => <div className="timeline-event" key={event.id}><span className="timeline-dot"/><div className="timeline-event-body"><div><strong>{event.fromStatus ? `${statusLabel(event.fromStatus)} → ${statusLabel(event.toStatus)}` : statusLabel(event.toStatus)}</strong><time>{dateTime(event.createdAt)}</time></div><p>{event.note || 'Status pesanan diperbarui.'}</p><small>Oleh: {event.changedBy?.username || 'System'}</small></div></div>)}</div></section>
-        <footer className="invoice-footer"><span>30sFams · Private Resource Supply</span><span>Dokumen dibuat dari sistem pemesanan 30sFams.</span></footer>
+        <header className="invoice-brand-row"><div className="invoice-brand"><img src="/30s-logo.png" alt="30sFams"/><div><strong>30sFAMS</strong><span>Resource ORDER PORTAL</span></div></div><div className="invoice-status"><span>ORDER STATUS</span><StatusPill status={order.status} /></div></header>
+        <div className="invoice-title-row"><div><span className="section-kicker">ORDER DETAIL / INVOICE</span><h2 id="order-detail-title">{order.orderNumber}</h2><p>Created on {dateTime(order.createdAt)}</p></div><div className="invoice-meta"><span>Order number</span><strong>{order.orderNumber}</strong><span>Date diperbarui</span><strong>{dateTime(order.updatedAt || order.createdAt)}</strong>{order.archivedAt && <><span>Date archived</span><strong>{dateTime(order.archivedAt)} · {order.archivedBy?.username || 'Super Admin'}</strong></>}</div></div>
+        <div className="invoice-customer-grid"><div><span className="invoice-label">PEMESAN</span><strong>{order.user?.username || 'Your account'}</strong>{isSuper Admin && <small>{order.user?.email || '-'}</small>}</div><div><span className="invoice-label">ITEM COUNT</span><strong>{number(order.totalQuantity)} unit</strong><small>{number(order.items?.length || 0)} resource types</small></div></div>
+        <div className="invoice-section-title">Resource details</div>
+        <div className="table-wrap invoice-table-wrap"><table className="invoice-table"><thead><tr><th>Resource</th><th>Category</th><th>Qty</th><th>Unit price</th><th>Subtotal</th></tr></thead><tbody>{order.items?.map((item) => <tr key={item.id}><td><strong>{item.resourceName}</strong></td><td>{categoryLabel(item.category)}</td><td>{number(item.quantity)} {item.unit}</td><td>{money(item.unitPrice)}</td><td className="strong-cell">{money(item.lineTotal)}</td></tr>)}</tbody></table></div>
+        <div className="invoice-total-box"><div><span>Total quantity</span><strong>{number(order.totalQuantity)} unit</strong></div><div className="invoice-grand-total"><span>Total amount</span><strong>{money(order.totalAmount)}</strong></div></div>
+        <div className="invoice-note-grid"><section><span className="invoice-label">MEMBER NOTE</span><p>{order.notes?.trim() || 'No records of pemesan.'}</p></section>{(isSuper Admin || order.adminNotes) && <section><span className="invoice-label">ADMIN NOTE</span><p>{order.adminNotes?.trim() || 'No admin note yet.'}</p></section>}</div>
+        <section className="order-timeline"><div className="invoice-section-title"><History size={15}/> Order status history</div><div className="timeline-list">{history.map((event) => <div className="timeline-event" key={event.id}><span className="timeline-dot"/><div className="timeline-event-body"><div><strong>{event.fromStatus ? `${statusLabel(event.fromStatus)} → ${statusLabel(event.toStatus)}` : statusLabel(event.toStatus)}</strong><time>{dateTime(event.createdAt)}</time></div><p>{event.note || 'Order status updated.'}</p><small>By: {event.changedBy?.username || 'System'}</small></div></div>)}</div></section>
+        <footer className="invoice-footer"><span>30sFams · Private Resource Supply</span><span>Dokumen dibuat of sistem pemesanan 30sFams.</span></footer>
       </div>
-      <div className="order-detail-footer no-print"><button className="button button-ghost" onClick={onClose}>Tutup</button><button className="button button-primary" onClick={onPrint}><Printer size={15}/> Cetak invoice / Simpan PDF</button></div>
+      <div className="order-detail-footer no-print"><button className="button button-ghost" onClick={onClose}>Close</button><button className="button button-primary" onClick={onPrint}><Printer size={15}/> Print invoice / Save PDF</button></div>
     </section>
   </div>;
 }
 
 function exportOrdersForExcel(orders) {
-  const headers = ['Nomor Pesanan', 'Tanggal', 'Status', 'Tanggal Arsip', 'Diarsipkan Oleh', 'Username', 'Email', 'Catatan Pemesan', 'Catatan Admin', 'Resource', 'Kategori', 'Jumlah', 'Satuan', 'Harga Satuan (USD)', 'Subtotal (USD)', 'Total Kuantitas Pesanan', 'Total Nominal Pesanan (USD)'];
+  const headers = ['Order Number', 'Date', 'Status', 'Date Archived', 'Archived By', 'Membername', 'Email', 'Notes Ordered by', 'Notes Super Admin', 'Resource', 'Category', 'Quantity', 'Unit', 'Harga Unit (USD)', 'Subtotal (USD)', 'Order Quantity Total', 'Order Total (USD)'];
   const rows = orders.flatMap((order) => (order.items || []).map((item) => [
-    order.orderNumber, new Date(order.createdAt).toLocaleString('id-ID'), statusLabel(order.status),
-    order.archivedAt ? new Date(order.archivedAt).toLocaleString('id-ID') : '', order.archivedBy?.username || '',
+    order.orderNumber, new Date(order.createdAt).toLocaleString('en-US'), statusLabel(order.status),
+    order.archivedAt ? new Date(order.archivedAt).toLocaleString('en-US') : '', order.archivedBy?.username || '',
     order.user?.username || '', order.user?.email || '', order.notes || '', order.adminNotes || '', item.resourceName, categoryLabel(item.category),
     item.quantity, item.unit, item.unitPrice, item.lineTotal, order.totalQuantity, order.totalAmount,
   ]));
   const escape = (value) => {
     let text = String(value ?? '');
-    if (typeof value === 'string' && /^[\s]*[=+@\-]/.test(text)) text = `'${text}`; // Mencegah CSV formula injection saat dibuka di Excel.
+    if (typeof value === 'string' && /^[\s]*[=+@\-]/.test(text)) text = `'${text}`; // Prevents CSV formula injection when opened in Excel.
     return `"${text.replaceAll('"', '""')}"`;
   };
   const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
@@ -477,20 +477,20 @@ function Inventory({ resources, onCreate, onStock, onEdit, onToggle, onImage, on
   );
   useEffect(() => setPage(1), [filter, statusFilter, search, resources]);
   return <>
-    <SectionHeader eyebrow="INVENTORY CONTROL" title="Manajemen stok" description="Tambah resource, perbarui harga, dan catat setiap perubahan inventory." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Tambah resource</button>} />
-    {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>Resource baru</h3><p>Resource akan muncul di katalog dan dapat dipesan sesuai stok yang tersedia.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Nama resource<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contoh: WEAPON_PISTOL" /></label><label>SKU / kode unik<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Kategori<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Satuan<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Harga per satuan (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Stok awal<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label>Batas minimum stok<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(e) => setDraft({ ...draft, minStock: e.target.value })} /><small className="field-hint">Isi 0 jika tidak memakai batas minimum.</small></label><label className="span-two">Deskripsi<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Deskripsi singkat resource" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}>Simpan resource</button></div></form>}
-    <div className="panel"><div className="panel-heading"><div><h3>Daftar inventory</h3><p>{number(shown.length)} dari {number(resources.length)} item ditampilkan</p></div><div className="inventory-count">{number(shown.length)} hasil</div></div>
+    <SectionHeader eyebrow="INVENTORY CONTROL" title="Inventory Management" description="Add Resource, perbarui harga, dan catat setiap perubahan inventory." action={<button className="button button-primary" onClick={() => setShowCreate((v) => !v)}><PackagePlus size={16} /> Add Resource</button>} />
+    {showCreate && <form className="panel create-resource-form" onSubmit={create}><div className="panel-heading"><div><h3>New Resource</h3><p>The resource will appear in the catalog and can be ordered based on available stock.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div><div className="form-grid"><label>Resource name<input required minLength={2} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Contoh: WEAPON_PISTOL" /></label><label>SKU / unique code<input required value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value.toUpperCase() })} placeholder="WPN-001" /></label><label>Category<select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select></label><label>Unit<input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} placeholder="unit / pcs / pack" /></label><label>Unit price (USD)<input required type="number" min="0" step="1" value={draft.unitPrice} onChange={(e) => setDraft({ ...draft, unitPrice: e.target.value })} /></label><label>Initial stock<input required type="number" min="0" step="1" value={draft.initialStock} onChange={(e) => setDraft({ ...draft, initialStock: e.target.value })} /></label><label>Minimum stock threshold<input required type="number" min="0" max="1000000" step="1" value={draft.minStock} onChange={(e) => setDraft({ ...draft, minStock: e.target.value })} /><small className="field-hint">Isi 0 jika tidak memakai batas minimum.</small></label><label className="span-two">Description<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Description singkat resource" /></label></div><div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Cancel</button><button className="button button-primary" disabled={busy}>Save resource</button></div></form>}
+    <div className="panel"><div className="panel-heading"><div><h3>Inventory List</h3><p>{number(shown.length)} of {number(resources.length)} items shown</p></div><div className="inventory-count">{number(shown.length)} results</div></div>
       <div className="catalog-toolbar inventory-toolbar">
-        <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama resource atau SKU..." /></div>
-        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter kategori"><option value="ALL">Semua kategori</option>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select><ChevronDown size={14} /></div>
-        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter status"><option value="ALL">Semua status</option><option value="ACTIVE">Aktif</option><option value="INACTIVE">Nonaktif</option><option value="LOW">Stok menipis / habis</option></select><ChevronDown size={14} /></div>
+        <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search resource name or SKU..." /></div>
+        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter by category"><option value="ALL">All categories</option>{CATEGORIES.map((c) => <option value={c} key={c}>{categoryLabel(c)}</option>)}</select><ChevronDown size={14} /></div>
+        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status"><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="LOW">Low stock / habis</option></select><ChevronDown size={14} /></div>
       </div>
-      {shown.length ? <><div className="table-wrap"><table><thead><tr><th>Resource</th><th>Kategori</th><th>Harga / unit</th><th>Stok tersedia</th><th>Dicadangkan</th><th>Total stok</th><th>Batas minimum</th><th>Status</th><th>Kelola</th></tr></thead><tbody>{visibleResources.map((resource) => {
+      {shown.length ? <><div className="table-wrap"><table><thead><tr><th>Resource</th><th>Category</th><th>Price / unit</th><th>Available stock</th><th>Reserved</th><th>Total stock</th><th>Batas minimum</th><th>Status</th><th>Manage</th></tr></thead><tbody>{visibleResources.map((resource) => {
         const available = Number(resource.stockAvailable || 0);
         const minimum = Number(resource.minStock || 0);
         const low = available <= 0 || (minimum > 0 && available <= minimum);
-        return <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td>{number(minimum)} {resource.unit}</td><td><div className="inventory-status-stack"><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Aktif' : 'Nonaktif'}</span>{resource.isActive && low && <span className={`stock-tag ${available <= 0 ? 'out-stock' : 'low-stock'}`}>{available <= 0 ? 'Stok habis' : 'Menipis'}</span>}</div></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Ganti gambar' : 'Upload gambar'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Hapus gambar"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Atur stok</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Edit data resource"><Pencil size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Nonaktifkan' : 'Aktifkan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>;
-      })}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={shown.length} onPageChange={setPage} /></> : <EmptyState title="Resource tidak ditemukan" detail={resources.length ? 'Coba ubah kata pencarian atau filter kategori/status.' : 'Belum ada resource. Tambahkan resource pertama melalui tombol Tambah resource.'} />}
+        return <tr key={resource.id}><td><div className="resource-table-name"><div className="item-symbol resource-thumb">{resource.imageUrl ? <img src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" /> : <Package size={17} />}</div><div><strong>{resource.name}</strong><small>{resource.sku}</small></div></div></td><td><span className="category-label">{categoryLabel(resource.category)}</span></td><td>{money(resource.unitPrice)}</td><td className="strong-cell">{number(resource.stockAvailable)}</td><td>{number(resource.stockReserved)}</td><td>{number(resource.stockTotal)}</td><td>{number(minimum)} {resource.unit}</td><td><div className="inventory-status-stack"><span className={`stock-tag ${resource.isActive ? 'in-stock' : 'out-stock'}`}>{resource.isActive ? 'Active' : 'Inactive'}</span>{resource.isActive && low && <span className={`stock-tag ${available <= 0 ? 'out-stock' : 'low-stock'}`}>{available <= 0 ? 'Out of stock' : 'Menipis'}</span>}</div></td><td><div className="table-actions"><label className={`action-button image-upload-control ${busy ? 'disabled' : ''}`} title={resource.imageUrl ? 'Change image' : 'Upload image'}><Upload size={15} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (file) await onImage(resource, file); event.target.value = ''; }} /></label>{resource.imageUrl && <button className="action-button reject" disabled={busy} onClick={() => onRemoveImage(resource)} title="Remove image"><Trash2 size={14} /></button>}<button className="button button-small button-outline" disabled={busy} onClick={() => onStock(resource)}>Adjust stock</button><button className="action-button" disabled={busy} onClick={() => onEdit(resource)} title="Edit resource details"><Pencil size={15} /></button><button className="action-button" disabled={busy} onClick={() => onToggle(resource)} title={resource.isActive ? 'Inactivekan' : 'Activekan'}>{resource.isActive ? <X size={15} /> : <Check size={15} />}</button></div></td></tr>;
+      })}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={shown.length} onPageChange={setPage} /></> : <EmptyState title="No resources found" detail={resources.length ? 'Try changing the search term or category/status filter.' : 'None yet resource. Tambahkan resource pertama melalui tombol Add Resource.'} />}
     </div>
   </>;
 }
@@ -537,34 +537,34 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
   }
 
   return <>
-    <SectionHeader eyebrow="BRANGKAS / STASH" title="Stash" description="Daftar seluruh barang di brangkas. Stok resource katalog tetap terhubung, sedangkan barang kategori Other hanya disimpan di halaman ini." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><PackagePlus size={16} /> Tambah barang Stash</button>} />
+    <SectionHeader eyebrow="STASH" title="Stash" description="All items stored in the stash. Catalog resource stock stays linked, while items in the Other category are stored on this page only." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><PackagePlus size={16} /> Add Stash Item</button>} />
     <div className="stats-grid">
-      <StatCard label="Jenis barang" value={number(resources.length)} detail="Seluruh item terdaftar di Stash" icon={Boxes} tone="blue" />
-      <StatCard label="Total stok brangkas" value={number(totalStock)} detail="Tersedia + dicadangkan" icon={Package} tone="green" />
-      <StatCard label="Stok tersedia" value={number(totalAvailable)} detail="Stok yang belum dicadangkan" icon={PackagePlus} tone="purple" />
-      <StatCard label="Stok dicadangkan" value={number(totalReserved)} detail="Sedang terikat pesanan aktif" icon={ClipboardList} tone="orange" />
+      <StatCard label="Item types" value={number(resources.length)} detail="All items registered in the stash" icon={Boxes} tone="blue" />
+      <StatCard label="Total stock brangkas" value={number(totalStock)} detail="Available + reserved" icon={Package} tone="green" />
+      <StatCard label="Available stock" value={number(totalAvailable)} detail="Stock not currently reserved" icon={PackagePlus} tone="purple" />
+      <StatCard label="Stock dicadangkan" value={number(totalReserved)} detail="Reserved for active orders" icon={ClipboardList} tone="orange" />
     </div>
     {showCreate && <form className="panel create-resource-form" onSubmit={createOtherItem}>
-      <div className="panel-heading"><div><h3>Barang baru khusus Stash</h3><p>Kategori otomatis Other. Barang ini tidak akan muncul di Manajemen Stok katalog maupun Katalog & Pesan.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)} aria-label="Tutup"><X size={17} /></button></div>
+      <div className="panel-heading"><div><h3>New Stash-only Item</h3><p>Category otomatis Other. Barang ini tidak akan muncul di Manajemen Stock katalog maupun Katalog & Pesan.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)} aria-label="Close"><X size={17} /></button></div>
       <div className="form-grid">
-        <label>Nama barang<input required minLength={2} maxLength={100} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Contoh: Perlengkapan brangkas" /></label>
-        <label>SKU / kode unik<input required minLength={2} maxLength={40} value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value.toUpperCase() })} placeholder="OTH-001" /></label>
-        <label>Satuan<input required maxLength={24} value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} placeholder="unit / pcs / pack" /></label>
-        <label>Stok awal<input required type="number" min="0" max="1000000" step="1" value={draft.initialStock} onChange={(event) => setDraft({ ...draft, initialStock: event.target.value })} /></label>
-        <label className="span-two">Deskripsi<input maxLength={500} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Keterangan barang (opsional)" /></label>
+        <label>Item name<input required minLength={2} maxLength={100} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Example: Storage supplies" /></label>
+        <label>SKU / unique code<input required minLength={2} maxLength={40} value={draft.sku} onChange={(event) => setDraft({ ...draft, sku: event.target.value.toUpperCase() })} placeholder="OTH-001" /></label>
+        <label>Unit<input required maxLength={24} value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} placeholder="unit / pcs / pack" /></label>
+        <label>Initial stock<input required type="number" min="0" max="1000000" step="1" value={draft.initialStock} onChange={(event) => setDraft({ ...draft, initialStock: event.target.value })} /></label>
+        <label className="span-two">Description<input maxLength={500} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Item details (optional)" /></label>
       </div>
-      <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}>Simpan ke Stash</button></div>
+      <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Cancel</button><button className="button button-primary" disabled={busy}>Save to Stash</button></div>
     </form>}
     <div className="panel">
       <div className="panel-heading">
-        <div><h3>Isi brangkas</h3><p>Stok barang katalog mengikuti Resource yang sama, tanpa membuat stok duplikat.</p></div>
-        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="ALL">Semua kategori</option>{STASH_CATEGORIES.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select><ChevronDown size={14} /></div>
+        <div><h3>Stash contents</h3><p>Catalog items use the same Resource stock without creating duplicate inventory.</p></div>
+        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="ALL">All categories</option>{STASH_CATEGORIES.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select><ChevronDown size={14} /></div>
       </div>
-      <div className="catalog-toolbar stash-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama barang atau SKU..." /></div></div>
+      <div className="catalog-toolbar stash-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search item name or SKU..." /></div></div>
       {visible.length ? <>
         <div className="resource-grid stash-resource-grid">{visible.map((resource) => {
           const itemTotal = Number(resource.stockTotal ?? (Number(resource.stockAvailable || 0) + Number(resource.stockReserved || 0)));
-          const statusText = !resource.isActive ? 'Nonaktif' : itemTotal > 0 ? 'Ada stok' : 'Stok kosong';
+          const statusText = !resource.isActive ? 'Inactive' : itemTotal > 0 ? 'Ada stok' : 'Stock kosong';
           const statusClass = resource.isActive && itemTotal > 0 ? 'in-stock' : 'out-stock';
           return <article className="resource-card stash-resource-card" key={resource.id}>
             <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
@@ -577,15 +577,15 @@ function StashPage({ resources = [], onCreate, onStock, busy }) {
             <div className="resource-card-body">
               <div className="resource-name-row"><h3>{resource.name}</h3><span className={`stock-tag ${statusClass}`}>{statusText}</span></div>
               <p>{resource.description || 'Tidak ada deskripsi untuk barang ini.'}</p>
-              <div className="resource-meta"><span>Total di brangkas</span><strong>{number(itemTotal)} {resource.unit}</strong></div>
-              <div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
-              <div className="resource-meta"><span>Dicadangkan</span><strong>{number(resource.stockReserved)} {resource.unit}</strong></div>
-              <div className="resource-action"><button className="button button-outline button-full" disabled={busy} onClick={() => onStock(resource)}><SlidersHorizontal size={14} /> Atur stok</button></div>
+              <div className="resource-meta"><span>Total in stash</span><strong>{number(itemTotal)} {resource.unit}</strong></div>
+              <div className="resource-meta"><span>Available stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+              <div className="resource-meta"><span>Reserved</span><strong>{number(resource.stockReserved)} {resource.unit}</strong></div>
+              <div className="resource-action"><button className="button button-outline button-full" disabled={busy} onClick={() => onStock(resource)}><SlidersHorizontal size={14} /> Adjust stock</button></div>
             </div>
           </article>;
         })}</div>
         <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
-      </> : <EmptyState icon={Archive} title="Barang tidak ditemukan" detail={resources.length ? 'Coba ubah kata pencarian atau kategori.' : 'Belum ada barang di brangkas. Tambahkan barang khusus melalui tombol Tambah barang Stash.'} />}
+      </> : <EmptyState icon={Archive} title="No items found" detail={resources.length ? 'Try changing the search term or category.' : 'None yet barang di brangkas. Tambahkan barang khusus melalui tombol Add Stash Item.'} />}
     </div>
   </>;
 }
@@ -595,20 +595,20 @@ function Reports({ reports }) {
   const summary = reports.summary;
   const categories = Object.entries(reports.categories || {});
   return <>
-    <SectionHeader eyebrow="ANALYTICS & REPORTS" title="Laporan transaksi" description="Rekap kuantitas dan nominal berdasarkan pesanan yang telah selesai, disetujui, dan menunggu." action={<div className="date-chip"><FileText size={15} /> Ringkasan keseluruhan</div>} />
+    <SectionHeader eyebrow="ANALYTICS & REPORTS" title="Transaction Reports" description="Rekap kuantitas dan nominal berdasarkan pesanan yang telah selesai, disetujui, dan menunggu." action={<div className="date-chip"><FileText size={15} /> Ringkasan keseluruhan</div>} />
     <div className="stats-grid">
-      <StatCard label="Nominal selesai" value={money(summary.completedAmount)} detail={`${number(summary.completedQuantity)} unit · Completed`} icon={CircleDollarSign} tone="green" />
-      <StatCard label="Nilai dicadangkan" value={money(summary.reservedAmount)} detail={`${number(summary.reservedQuantity)} unit · Approved`} icon={Package} tone="blue" />
-      <StatCard label="Nilai menunggu" value={money(summary.pendingAmount)} detail={`${number(summary.pendingQuantity)} unit · Pending`} icon={Clock3} tone="orange" />
-      <StatCard label="Total pesanan" value={number(summary.totalOrders)} detail={`${number(summary.totalUsers)} user · ${number(summary.activeResources)} resource aktif`} icon={ClipboardList} tone="purple" />
+      <StatCard label="Completed amount" value={money(summary.completedAmount)} detail={`${number(summary.completedQuantity)} unit · Completed`} icon={CircleDollarSign} tone="green" />
+      <StatCard label="Reserved value" value={money(summary.reservedAmount)} detail={`${number(summary.reservedQuantity)} unit · Approved`} icon={Package} tone="blue" />
+      <StatCard label="Pending value" value={money(summary.pendingAmount)} detail={`${number(summary.pendingQuantity)} unit · Pending`} icon={Clock3} tone="orange" />
+      <StatCard label="Total orders" value={number(summary.totalOrders)} detail={`${number(summary.totalMembers)} user · ${number(summary.activeResources)} active resources`} icon={ClipboardList} tone="purple" />
     </div>
-    <div className="dashboard-grid reports-grid"><div className="panel"><div className="panel-heading"><div><h3>Penjualan per kategori</h3><p>Hanya pesanan berstatus Completed</p></div></div>{categories.length ? <div className="table-wrap"><table><thead><tr><th>Kategori</th><th>Jumlah terjual</th><th>Nominal</th></tr></thead><tbody>{categories.map(([category, values]) => <tr key={category}><td className="strong-cell">{categoryLabel(category)}</td><td>{number(values.quantity)} unit</td><td>{money(values.amount)}</td></tr>)}</tbody></table></div> : <EmptyState title="Belum ada penjualan selesai" detail="Laporan kategori akan terisi setelah pesanan selesai." />}</div>
-      <div className="panel"><div className="panel-heading"><div><h3>Resource terlaris</h3><p>Berdasarkan kuantitas pesanan selesai</p></div></div>{reports.topResources?.length ? <div className="compact-list">{reports.topResources.map((item, i) => <div className="compact-row" key={item.resourceId}><div className="rank-number">{String(i + 1).padStart(2, '0')}</div><div className="compact-main"><strong>{item.name}</strong><span>{number(item.quantity)} unit terjual</span></div><div className="compact-side"><strong>{money(item.amount)}</strong></div></div>)}</div> : <EmptyState title="Belum ada data" detail="Resource terlaris akan muncul di sini." />}</div></div>
-    <div className="panel status-report"><div className="panel-heading"><div><h3>Status pesanan</h3><p>Jumlah pesanan pada setiap tahap</p></div></div><div className="status-summary">{[['PENDING','Menunggu',summary.pendingOrders],['APPROVED','Disetujui',summary.approvedOrders],['COMPLETED','Selesai',summary.completedOrders],['REJECTED','Ditolak',summary.rejectedOrders],['CANCELLED','Dibatalkan',summary.cancelledOrders]].map(([key, label, value]) => <div key={key}><StatusPill status={key} /><strong>{number(value)}</strong><span>{label}</span></div>)}</div></div>
+    <div className="dashboard-grid reports-grid"><div className="panel"><div className="panel-heading"><div><h3>Sales by category</h3><p>Completed orders only</p></div></div>{categories.length ? <div className="table-wrap"><table><thead><tr><th>Category</th><th>Quantity terjual</th><th>Amount</th></tr></thead><tbody>{categories.map(([category, values]) => <tr key={category}><td className="strong-cell">{categoryLabel(category)}</td><td>{number(values.quantity)} unit</td><td>{money(values.amount)}</td></tr>)}</tbody></table></div> : <EmptyState title="No completed sales yet" detail="Category reports will appear once orders are completed." />}</div>
+      <div className="panel"><div className="panel-heading"><div><h3>Top resources</h3><p>Based on completed order quantities</p></div></div>{reports.topResources?.length ? <div className="compact-list">{reports.topResources.map((item, i) => <div className="compact-row" key={item.resourceId}><div className="rank-number">{String(i + 1).padStart(2, '0')}</div><div className="compact-main"><strong>{item.name}</strong><span>{number(item.quantity)} units sold</span></div><div className="compact-side"><strong>{money(item.amount)}</strong></div></div>)}</div> : <EmptyState title="No data yet" detail="Top resources akan muncul di sini." />}</div></div>
+    <div className="panel status-report"><div className="panel-heading"><div><h3>Order status</h3><p>Quantity pesanan pada setiap tahap</p></div></div><div className="status-summary">{[['PENDING','Pending',summary.pendingOrders],['APPROVED','Approved',summary.approvedOrders],['COMPLETED','Completed',summary.completedOrders],['REJECTED','Rejected',summary.rejectedOrders],['CANCELLED','Cancelled',summary.cancelledOrders]].map(([key, label, value]) => <div key={key}><StatusPill status={key} /><strong>{number(value)}</strong><span>{label}</span></div>)}</div></div>
   </>;
 }
 
-function UsersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChange, onRoleChange, currentUserId, busy }) {
+function MembersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChange, onRoleChange, currentMemberId, busy }) {
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState({ username: '', email: '', password: '', rank: 'HANGAROUND' });
   const [page, setPage] = useState(1);
@@ -616,13 +616,13 @@ function UsersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChang
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const pageSize = 25;
-  const filteredUsers = users.filter((user) => {
+  const filteredMembers = users.filter((user) => {
     const term = search.trim().toLowerCase();
     const matchesSearch = !term || user.username.toLowerCase().includes(term) || user.email.toLowerCase().includes(term);
     const status = user.registrationStatus === 'PENDING' ? 'PENDING' : user.registrationStatus === 'REJECTED' ? 'REJECTED' : user.isActive ? 'ACTIVE' : 'INACTIVE';
     return matchesSearch && (statusFilter === 'ALL' || status === statusFilter) && (roleFilter === 'ALL' || user.role === roleFilter);
   });
-  const visibleUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+  const visibleMembers = filteredMembers.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => setPage(1), [search, statusFilter, roleFilter, users]);
   async function submit(event) {
     event.preventDefault();
@@ -640,37 +640,37 @@ function UsersPage({ users, onCreate, onToggle, onDelete, onApprove, onRankChang
   }
   function rankLabel(rank) { return MEMBER_RANKS.find((item) => item.value === rank)?.label || 'Hangaround'; }
   return <>
-    <SectionHeader eyebrow="MEMBER MANAGEMENT" title="Members" description="Accounts, ranks, and access." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><UserPlus size={16} /> New member</button>} />
+    <SectionHeader eyebrow="MEMBER MANAGEMENT" title="Members" description="Accounts, ranks, and access." action={<button className="button button-primary" onClick={() => setShowCreate((value) => !value)}><MemberPlus size={16} /> New member</button>} />
     {users.some((user) => user.registrationStatus === 'PENDING') && <div className="notice warning"><Clock3 size={17}/><span>{number(users.filter((user) => user.registrationStatus === 'PENDING').length)} pendaftaran menunggu persetujuan.</span></div>}
     {showCreate && <form className="panel create-resource-form" onSubmit={submit}>
-      <div className="panel-heading"><div><h3>New member</h3><p>Akun baru langsung aktif dengan rank awal Hangaround.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div>
+      <div className="panel-heading"><div><h3>New member</h3><p>New accounts are activated immediately with the initial rank set to Hangaround.</p></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)}><X size={17} /></button></div>
       <div className="form-grid user-create-grid">
-        <label>Username<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="username" /></label>
+        <label>Membername<input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]+" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="username" /></label>
         <label>Email<input required type="email" maxLength={150} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="email@domain.com" /></label>
-        <label>Password awal<input required type="password" minLength={12} maxLength={100} value={draft.password} onChange={(event) => setDraft({ ...draft, password: event.target.value })} placeholder="Minimal 12 karakter" autoComplete="new-password" /></label>
-        <label>Rank awal<select value={draft.rank} onChange={(event) => setDraft({ ...draft, rank: event.target.value })}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select></label>
+        <label>Initial password<input required type="password" minLength={12} maxLength={100} value={draft.password} onChange={(event) => setDraft({ ...draft, password: event.target.value })} placeholder="At least 12 characters" autoComplete="new-password" /></label>
+        <label>Initial rank<select value={draft.rank} onChange={(event) => setDraft({ ...draft, rank: event.target.value })}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select></label>
       </div>
-      <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Batal</button><button className="button button-primary" disabled={busy}><UserPlus size={15}/> Create member</button></div>
+      <div className="form-footer"><button type="button" className="button button-ghost" onClick={() => setShowCreate(false)}>Cancel</button><button className="button button-primary" disabled={busy}><MemberPlus size={15}/> Create member</button></div>
     </form>}
     <div className="panel members-panel">
       <div className="members-toolbar">
-        <label className="members-search"><Search size={16}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or username" /></label>
-        <select aria-label="Filter status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">Any status</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="PENDING">Pending</option><option value="REJECTED">Rejected</option></select>
-        <select aria-label="Filter role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="ALL">Any role</option><option value="ADMIN">Super Admin</option><option value="USER">Member</option></select>
+        <label className="members-search"><Search size={16}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or username" /></label>
+        <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">Any status</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="PENDING">Pending</option><option value="REJECTED">Rejected</option></select>
+        <select aria-label="Filter role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="ALL">Any role</option><option value="ADMIN">Super Super Admin</option><option value="USER">Member</option></select>
       </div>
-      {filteredUsers.length ? <>
+      {filteredMembers.length ? <>
         <div className="table-wrap members-table-wrap"><table className="members-table"><thead><tr><th>Member</th><th>Rank</th><th>Role</th><th>Status</th><th>Orders</th><th>Actions</th></tr></thead><tbody>
-          {visibleUsers.map((user) => <tr key={user.id}>
+          {visibleMembers.map((user) => <tr key={user.id}>
             <td><div className="members-name"><span className="avatar-mini">{user.username.slice(0,1).toUpperCase()}</span><strong>{user.username}</strong></div></td>
             <td><select className="rank-select" aria-label={`Rank ${user.username}`} value={user.rank || 'HANGAROUND'} disabled={busy} onChange={(event) => onRankChange(user, event.target.value)}>{MEMBER_RANKS.map((rank) => <option key={rank.value} value={rank.value}>{rank.label}</option>)}</select></td>
-            <td><span className={`member-role-pill ${user.role === 'ADMIN' ? 'admin' : 'member'}`}>{user.role === 'ADMIN' ? 'Super Admin' : 'Member'}</span></td>
+            <td><span className={`member-role-pill ${user.role === 'ADMIN' ? 'admin' : 'member'}`}>{user.role === 'ADMIN' ? 'Super Super Admin' : 'Member'}</span></td>
             <td><span className={`stock-tag ${statusClass(user)}`}>{statusText(user)}</span></td>
             <td className="strong-cell">{number(user._count?.orders || 0)}</td>
-            <td><div className="table-actions"><select className="rank-select" aria-label={`Role ${user.username}`} value={user.role} disabled={busy || user.id === currentUserId} onChange={(event) => onRoleChange(user, event.target.value)}><option value="USER">Member</option><option value="ADMIN">Super Admin</option></select>{user.role === 'USER' ? <>{user.registrationStatus === 'PENDING' ? <><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Approve</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Reject</button></> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><UserPlus size={13}/> Approve again</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><UserX size={13}/> Deactivate</> : <><UserPlus size={13}/> Activate</>}</button>}<button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onDelete(user)}><Trash2 size={13}/> Hapus</button></> : <span className="muted">{user.id === currentUserId ? 'Your account' : 'Full access'}</span>}</div></td>
+            <td><div className="table-actions"><select className="rank-select" aria-label={`Role ${user.username}`} value={user.role} disabled={busy || user.id === currentMemberId} onChange={(event) => onRoleChange(user, event.target.value)}><option value="USER">Member</option><option value="ADMIN">Super Super Admin</option></select>{user.role === 'USER' ? <>{user.registrationStatus === 'PENDING' ? <><button className="button button-small button-primary" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><Check size={13}/> Approve</button><button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onApprove(user, 'REJECTED')}><X size={13}/> Reject</button></> : user.registrationStatus === 'REJECTED' ? <button className="button button-small button-outline" disabled={busy} onClick={() => onApprove(user, 'APPROVED')}><MemberPlus size={13}/> Approve again</button> : <button className={`button button-small ${user.isActive ? 'button-ghost-danger' : 'button-outline'}`} disabled={busy} onClick={() => onToggle(user)}>{user.isActive ? <><MemberX size={13}/> Deactivate</> : <><MemberPlus size={13}/> Activate</>}</button>}<button className="button button-small button-ghost-danger" disabled={busy} onClick={() => onDelete(user)}><Trash2 size={13}/> Delete</button></> : <span className="muted">{user.id === currentMemberId ? 'Your account' : 'Full access'}</span>}</div></td>
           </tr>)}
         </tbody></table></div>
-        <div className="members-table-footer"><span>{number(filteredUsers.length ? (page - 1) * pageSize + 1 : 0)}–{number(Math.min(page * pageSize, filteredUsers.length))} of {number(filteredUsers.length)}</span><DataPagination page={page} pageSize={pageSize} total={filteredUsers.length} onPageChange={setPage} /></div>
-      </> : <EmptyState icon={Users} title="No members found" detail="Coba ubah kata pencarian atau filter." />}
+        <div className="members-table-footer"><span>{number(filteredMembers.length ? (page - 1) * pageSize + 1 : 0)}–{number(Math.min(page * pageSize, filteredMembers.length))} of {number(filteredMembers.length)}</span><DataPagination page={page} pageSize={pageSize} total={filteredMembers.length} onPageChange={setPage} /></div>
+      </> : <EmptyState icon={Members} title="No members found" detail="Try changing the search term or filters." />}
     </div>
   </>;
 }
@@ -689,17 +689,17 @@ function todayJakartaInput() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 function cashEntryLabel(entry) {
-  if (entry.type === 'ADJUSTMENT_IN') return entry.category === 'Koreksi saldo' ? 'Koreksi saldo (+)' : 'Penambahan saldo manual';
-  if (entry.type === 'ADJUSTMENT_OUT') return 'Koreksi saldo (-)';
-  return ({ OPENING_BALANCE: 'Saldo awal', ORDER_INCOME: 'Pembelian resource', EXPENSE: 'Pengeluaran gang' })[entry.type] || entry.type;
+  if (entry.type === 'ADJUSTMENT_IN') return entry.category === 'Balance adjustment' ? 'Balance adjustment (+)' : 'Manual balance increase';
+  if (entry.type === 'ADJUSTMENT_OUT') return 'Balance adjustment (-)';
+  return ({ OPENING_BALANCE: 'Opening balance', ORDER_INCOME: 'Resource purchase', EXPENSE: 'Gang expenses' })[entry.type] || entry.type;
 }
 
 function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeriod, onSetOpeningBalance, onAddExpense, onAddCashIncome, onAdjustCash, busy }) {
   const currentPeriod = finance?.currentPeriod;
-  const [periodDraft, setPeriodDraft] = useState({ name: 'Periode pembelanjaan', startDate: todayJakartaInput(), endDate: '' });
+  const [periodDraft, setPeriodDraft] = useState({ name: 'Spending Period', startDate: todayJakartaInput(), endDate: '' });
   const [openingDraft, setOpeningDraft] = useState('');
-  const [expenseDraft, setExpenseDraft] = useState({ amount: '', category: 'Operasional', description: '' });
-  const [incomeDraft, setIncomeDraft] = useState({ amount: '', category: 'Pemasukan manual', description: '' });
+  const [expenseDraft, setExpenseDraft] = useState({ amount: '', category: 'Operations', description: '' });
+  const [incomeDraft, setIncomeDraft] = useState({ amount: '', category: 'Manual income', description: '' });
   const [adjustmentDraft, setAdjustmentDraft] = useState({ direction: 'OUT', amount: '', description: '' });
   const [ledgerFilter, setLedgerFilter] = useState('ALL');
   const [cashPage, setCashPage] = useState(1);
@@ -718,24 +718,24 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
     if (currentPeriod) await onUpdatePeriod(payload); else await onStartPeriod(payload);
   }
   async function resetPeriod() {
-    const typed = window.prompt('Periode aktif akan disimpan ke riwayat dan periode baru dimulai. Total sepanjang masa tidak dihapus. Ketik RESET PERIOD 30SFAMS untuk melanjutkan:');
+    const typed = window.prompt('The current period will be saved to history and a new period will begin. Lifetime totals will not be deleted. Type RESET PERIOD 30SFAMS to continue:');
     if (typed !== 'RESET PERIOD 30SFAMS') return;
-    await onResetPeriod({ confirmation: typed, name: periodDraft.name || 'Periode baru' });
+    await onResetPeriod({ confirmation: typed, name: periodDraft.name || 'New Period' });
   }
   async function submitOpening(event) {
     event.preventDefault();
-    const saved = await onSetOpeningBalance({ amount: Number(openingDraft), description: 'Penetapan saldo awal kas gang 30sFams' });
+    const saved = await onSetOpeningBalance({ amount: Number(openingDraft), description: 'Set opening balance for the 30sFams gang fund' });
     if (saved) setOpeningDraft('');
   }
   async function submitExpense(event) {
     event.preventDefault();
     const saved = await onAddExpense({ ...expenseDraft, amount: Number(expenseDraft.amount) });
-    if (saved) setExpenseDraft({ amount: '', category: 'Operasional', description: '' });
+    if (saved) setExpenseDraft({ amount: '', category: 'Operations', description: '' });
   }
   async function submitIncome(event) {
     event.preventDefault();
     const saved = await onAddCashIncome({ ...incomeDraft, amount: Number(incomeDraft.amount) });
-    if (saved) setIncomeDraft({ amount: '', category: 'Pemasukan manual', description: '' });
+    if (saved) setIncomeDraft({ amount: '', category: 'Manual income', description: '' });
   }
   async function submitAdjustment(event) {
     event.preventDefault();
@@ -743,7 +743,7 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
     if (saved) setAdjustmentDraft({ direction: 'OUT', amount: '', description: '' });
   }
 
-  if (!finance || !cash) return <div className="panel loading-panel">Memuat data keuangan...</div>;
+  if (!finance || !cash) return <div className="panel loading-panel">Loading financial data...</div>;
   const lifetime = finance.lifetime || {};
   const currentSummary = currentPeriod?.summary || {};
   const cashSummary = cash.summary || {};
@@ -756,79 +756,79 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
   useEffect(() => setCashPage(1), [ledgerFilter]);
 
   return <>
-    <SectionHeader eyebrow="FINANCE & GANG FUND" title="Keuangan & kas gang" description="Halaman ini khusus admin. Pembelanjaan dihitung dari pesanan Completed; saldo kas dihitung dari buku kas masuk dan keluar." action={<div className="date-chip"><ShieldCheck size={15}/> Admin only</div>} />
+    <SectionHeader eyebrow="FINANCE & GANG FUND" title="Finance & Gang Fund" description="Page ini khusus admin. Pembelanjaan dihitung of pesanan Completed; saldo kas dihitung of buku kas masuk dan keluar." action={<div className="date-chip"><ShieldCheck size={15}/> Super Admin only</div>} />
     <div className="stats-grid finance-stats-grid">
-      <StatCard label="Total pembelanjaan sepanjang masa" value={money(lifetime.totalAmount)} detail={`${number(lifetime.completedOrders)} pesanan selesai · ${number(lifetime.totalQuantity)} unit`} icon={ChartNoAxesCombined} tone="purple" />
-      <StatCard label="Pembelanjaan periode aktif" value={money(currentSummary.totalAmount)} detail={`${number(currentSummary.completedOrders)} pesanan selesai`} icon={CalendarDays} tone="blue" />
-      <StatCard label="Saldo kas gang" value={money(cashSummary.balance)} detail="Saldo berjalan berdasarkan buku kas" icon={Wallet} tone="green" />
-      <StatCard label="Total pengeluaran gang" value={money(cashSummary.expenses)} detail="Pengeluaran yang dicatat admin" icon={ArrowDownToLine} tone="orange" />
+      <StatCard label="Lifetime spending" value={money(lifetime.totalAmount)} detail={`${number(lifetime.completedOrders)} completed orders · ${number(lifetime.totalQuantity)} unit`} icon={ChartNoAxesCombined} tone="purple" />
+      <StatCard label="Current period spending" value={money(currentSummary.totalAmount)} detail={`${number(currentSummary.completedOrders)} completed orders`} icon={CalendarDays} tone="blue" />
+      <StatCard label="Gang fund balance" value={money(cashSummary.balance)} detail="Current balance based on the cash ledger" icon={Wallet} tone="green" />
+      <StatCard label="Total gang expenses" value={money(cashSummary.expenses)} detail="Expenses recorded by admins" icon={ArrowDownToLine} tone="orange" />
     </div>
 
     <div className="finance-grid">
       <section className="panel finance-panel">
-        <div className="panel-heading"><div><h3>Periode pembelanjaan</h3><p>Atur tanggal mulai dan akhir. Reset membuat periode baru tanpa menghapus total sepanjang masa.</p></div><CalendarDays size={19}/></div>
+        <div className="panel-heading"><div><h3>Spending Period</h3><p>Set the start and end dates. Resetting starts a new period without deleting lifetime totals.</p></div><CalendarDays size={19}/></div>
         <form className="finance-form" onSubmit={savePeriod}>
           <div className="form-grid finance-period-grid">
-            <label>Nama periode<input required minLength={3} maxLength={80} value={periodDraft.name} onChange={(event) => setPeriodDraft({ ...periodDraft, name: event.target.value })} placeholder="Contoh: November 2026" /></label>
-            <label>Tanggal mulai<input required type="date" value={periodDraft.startDate} onChange={(event) => setPeriodDraft({ ...periodDraft, startDate: event.target.value })} /></label>
-            <label>Tanggal akhir <small>(kosong = tanpa batas akhir)</small><input type="date" value={periodDraft.endDate} min={periodDraft.startDate} onChange={(event) => setPeriodDraft({ ...periodDraft, endDate: event.target.value })} /></label>
+            <label>Period name<input required minLength={3} maxLength={80} value={periodDraft.name} onChange={(event) => setPeriodDraft({ ...periodDraft, name: event.target.value })} placeholder="Example: November 2026" /></label>
+            <label>Date mulai<input required type="date" value={periodDraft.startDate} onChange={(event) => setPeriodDraft({ ...periodDraft, startDate: event.target.value })} /></label>
+            <label>Date akhir <small>(leave blank for no end date)</small><input type="date" value={periodDraft.endDate} min={periodDraft.startDate} onChange={(event) => setPeriodDraft({ ...periodDraft, endDate: event.target.value })} /></label>
           </div>
-          <div className="finance-actions"><button className="button button-primary" disabled={busy}><Check size={15}/>{currentPeriod ? 'Simpan rentang periode' : 'Buat periode pertama'}</button>{currentPeriod && <button type="button" className="button button-ghost-danger" disabled={busy} onClick={resetPeriod}><RotateCcw size={15}/> Reset ke periode baru</button>}</div>
+          <div className="finance-actions"><button className="button button-primary" disabled={busy}><Check size={15}/>{currentPeriod ? 'Save period range' : 'Create first period'}</button>{currentPeriod && <button type="button" className="button button-ghost-danger" disabled={busy} onClick={resetPeriod}><RotateCcw size={15}/> Reset to new period</button>}</div>
         </form>
         <div className="finance-period-summary">
-          <div><span>Periode sekarang</span><strong>{currentPeriod ? currentPeriod.name : 'Belum diatur'}</strong></div>
-          <div><span>Total periode</span><strong>{money(currentSummary.totalAmount)}</strong></div>
-          <div><span>Jumlah resource</span><strong>{number(currentSummary.totalQuantity || 0)} unit</strong></div>
+          <div><span>Current period</span><strong>{currentPeriod ? currentPeriod.name : 'Not configured'}</strong></div>
+          <div><span>Period total</span><strong>{money(currentSummary.totalAmount)}</strong></div>
+          <div><span>Quantity resource</span><strong>{number(currentSummary.totalQuantity || 0)} unit</strong></div>
         </div>
-        <div className="panel-subheading"><h4>Riwayat periode</h4><small>Reset hanya mengakhiri periode, transaksi lama tetap tersimpan.</small></div>
-        {periods.length ? <div className="table-wrap"><table><thead><tr><th>Periode</th><th>Rentang</th><th>Pesanan</th><th>Total</th><th>Status</th></tr></thead><tbody>{periods.map((period) => <tr key={period.id}><td className="strong-cell">{period.name}</td><td>{dateTime(period.startAt)} – {period.endAt ? dateTime(period.endAt) : 'Berjalan'}</td><td>{number(period.summary?.completedOrders || 0)}</td><td>{money(period.summary?.totalAmount || 0)}</td><td><span className={`stock-tag ${period.isCurrent ? 'in-stock' : 'out-stock'}`}>{period.isCurrent ? 'Aktif' : 'Arsip'}</span></td></tr>)}</tbody></table></div> : <EmptyState icon={CalendarDays} title="Belum ada periode" detail="Atur rentang tanggal di atas untuk mulai menghitung pembelanjaan periode." />}
+        <div className="panel-subheading"><h4>Period history</h4><small>Resetting only closes the period; previous transactions remain saved.</small></div>
+        {periods.length ? <div className="table-wrap"><table><thead><tr><th>Periode</th><th>Rentang</th><th>Orders</th><th>Total</th><th>Status</th></tr></thead><tbody>{periods.map((period) => <tr key={period.id}><td className="strong-cell">{period.name}</td><td>{dateTime(period.startAt)} – {period.endAt ? dateTime(period.endAt) : 'In progress'}</td><td>{number(period.summary?.completedOrders || 0)}</td><td>{money(period.summary?.totalAmount || 0)}</td><td><span className={`stock-tag ${period.isCurrent ? 'in-stock' : 'out-stock'}`}>{period.isCurrent ? 'Active' : 'Archived'}</span></td></tr>)}</tbody></table></div> : <EmptyState icon={CalendarDays} title="No periods yet" detail="Set the date range above to start tracking period spending." />}
       </section>
 
       <section className="panel finance-panel">
-        <div className="panel-heading"><div><h3>Kas gang 30sFams</h3><p>Hanya admin yang dapat melihat dan mencatat buku kas ini.</p></div><Wallet size={19}/></div>
-        <div className="cash-balance-card"><span>SALDO KAS SAAT INI</span><strong>{money(cashSummary.balance)}</strong><div><span>Pemasukan pesanan</span><b>{money(cashSummary.orderIncome)}</b></div><div><span>Pemasukan tambahan & koreksi masuk</span><b>{money(cashSummary.adjustmentIncome)}</b></div><div><span>Pengeluaran gang</span><b>{money(cashSummary.expenses)}</b></div><div><span>Koreksi saldo keluar</span><b>{money(cashSummary.adjustmentExpense)}</b></div></div>
+        <div className="panel-heading"><div><h3>30sFams Gang Fund</h3><p>Only admins can view and manage this cash ledger.</p></div><Wallet size={19}/></div>
+        <div className="cash-balance-card"><span>CURRENT CASH BALANCE</span><strong>{money(cashSummary.balance)}</strong><div><span>Order income</span><b>{money(cashSummary.orderIncome)}</b></div><div><span>Additional income & positive adjustments</span><b>{money(cashSummary.adjustmentIncome)}</b></div><div><span>Gang expenses</span><b>{money(cashSummary.expenses)}</b></div><div><span>Balance adjustment keluar</span><b>{money(cashSummary.adjustmentExpense)}</b></div></div>
         {!cash.initialized ? <form className="finance-form cash-form" onSubmit={submitOpening}>
-          <div className="panel-subheading"><h4>Atur saldo awal kas</h4><small>Masukkan saldo kas riil saat fitur ini mulai digunakan. Setelah tersimpan, saldo tetap bisa ditambah atau dikoreksi melalui transaksi baru.</small></div>
-          <label>Saldo awal (USD)<input required type="number" min="0" step="0.01" value={openingDraft} onChange={(event) => setOpeningDraft(event.target.value)} placeholder="Contoh: 250.00" /></label>
-          <button className="button button-primary" disabled={busy || openingDraft === ''}><Wallet size={15}/> Simpan saldo awal</button>
+          <div className="panel-subheading"><h4>Set opening cash balance</h4><small>Enter the actual cash balance when this feature is first used. Once saved, the balance can still be increased or adjusted through new transactions.</small></div>
+          <label>Opening balance (USD)<input required type="number" min="0" step="0.01" value={openingDraft} onChange={(event) => setOpeningDraft(event.target.value)} placeholder="Example: 250.00" /></label>
+          <button className="button button-primary" disabled={busy || openingDraft === ''}><Wallet size={15}/> Save opening balance</button>
         </form> : <div className="cash-management-forms">
           <form className="finance-form cash-form" onSubmit={submitIncome}>
-            <div className="panel-subheading"><h4>Tambah saldo kas</h4><small>Catat setoran atau pemasukan lain di luar pembelian resource.</small></div>
+            <div className="panel-subheading"><h4>Add cash balance</h4><small>Record contributions or other income outside resource purchases.</small></div>
             <div className="form-grid cash-expense-grid">
-              <label>Nominal (USD)<input required type="number" min="0.01" step="0.01" value={incomeDraft.amount} onChange={(event) => setIncomeDraft({ ...incomeDraft, amount: event.target.value })} placeholder="Contoh: 100.00" /></label>
-              <label>Kategori<select value={incomeDraft.category} onChange={(event) => setIncomeDraft({ ...incomeDraft, category: event.target.value })}><option>Pemasukan manual</option><option>Setoran anggota</option><option>Donasi</option><option>Pemasukan lain</option></select></label>
-              <label className="span-two">Keterangan<input required minLength={3} maxLength={300} value={incomeDraft.description} onChange={(event) => setIncomeDraft({ ...incomeDraft, description: event.target.value })} placeholder="Contoh: setoran tambahan kas gang" /></label>
+              <label>Amount (USD)<input required type="number" min="0.01" step="0.01" value={incomeDraft.amount} onChange={(event) => setIncomeDraft({ ...incomeDraft, amount: event.target.value })} placeholder="Example: 100.00" /></label>
+              <label>Category<select value={incomeDraft.category} onChange={(event) => setIncomeDraft({ ...incomeDraft, category: event.target.value })}><option>Manual income</option><option>Setoran anggota</option><option>Donasi</option><option>Income lain</option></select></label>
+              <label className="span-two">Description<input required minLength={3} maxLength={300} value={incomeDraft.description} onChange={(event) => setIncomeDraft({ ...incomeDraft, description: event.target.value })} placeholder="Example: additional gang fund contribution" /></label>
             </div>
-            <button className="button button-primary" disabled={busy || !incomeDraft.amount || !incomeDraft.description.trim()}><ArrowUpRight size={15}/> Simpan penambahan saldo</button>
+            <button className="button button-primary" disabled={busy || !incomeDraft.amount || !incomeDraft.description.trim()}><ArrowUpRight size={15}/> Save balance increase</button>
           </form>
           <form className="finance-form cash-form" onSubmit={submitExpense}>
-            <div className="panel-subheading"><h4>Pengeluaran gang</h4><small>Pengeluaran dicatat sebagai transaksi baru dan tidak dapat dihapus.</small></div>
+            <div className="panel-subheading"><h4>Gang expenses</h4><small>Expenses are recorded as new transactions and cannot be deleted.</small></div>
             <div className="form-grid cash-expense-grid">
-              <label>Nominal (USD)<input required type="number" min="0.01" step="0.01" value={expenseDraft.amount} onChange={(event) => setExpenseDraft({ ...expenseDraft, amount: event.target.value })} placeholder="Contoh: 25.00" /></label>
-              <label>Kategori<select value={expenseDraft.category} onChange={(event) => setExpenseDraft({ ...expenseDraft, category: event.target.value })}><option>Operasional</option><option>Event</option><option>Perlengkapan</option><option>Transportasi</option><option>Lainnya</option></select></label>
-              <label className="span-two">Keterangan<input required minLength={3} maxLength={300} value={expenseDraft.description} onChange={(event) => setExpenseDraft({ ...expenseDraft, description: event.target.value })} placeholder="Contoh: biaya operasional kegiatan" /></label>
+              <label>Amount (USD)<input required type="number" min="0.01" step="0.01" value={expenseDraft.amount} onChange={(event) => setExpenseDraft({ ...expenseDraft, amount: event.target.value })} placeholder="Example: 25.00" /></label>
+              <label>Category<select value={expenseDraft.category} onChange={(event) => setExpenseDraft({ ...expenseDraft, category: event.target.value })}><option>Operations</option><option>Event</option><option>Supplies</option><option>Transportation</option><option>Other</option></select></label>
+              <label className="span-two">Description<input required minLength={3} maxLength={300} value={expenseDraft.description} onChange={(event) => setExpenseDraft({ ...expenseDraft, description: event.target.value })} placeholder="Example: event operating costs" /></label>
             </div>
-            <button className="button button-primary" disabled={busy || !expenseDraft.amount || !expenseDraft.description.trim()}><ArrowDownToLine size={15}/> Simpan pengeluaran</button>
+            <button className="button button-primary" disabled={busy || !expenseDraft.amount || !expenseDraft.description.trim()}><ArrowDownToLine size={15}/> Save expense</button>
           </form>
           <form className="finance-form cash-form cash-adjustment-form" onSubmit={submitAdjustment}>
-            <div className="panel-subheading"><h4>Koreksi saldo kas</h4><small>Gunakan untuk menyamakan saldo sistem dengan uang kas riil. Koreksi tidak menimpa transaksi sebelumnya.</small></div>
+            <div className="panel-subheading"><h4>Balance adjustment kas</h4><small>Use this to reconcile the system balance with actual cash. Adjustments do not overwrite previous transactions.</small></div>
             <div className="form-grid cash-expense-grid">
-              <label>Arah koreksi<select value={adjustmentDraft.direction} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, direction: event.target.value })}><option value="OUT">Kurangi saldo</option><option value="IN">Tambah saldo</option></select></label>
-              <label>Nominal (USD)<input required type="number" min="0.01" step="0.01" value={adjustmentDraft.amount} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, amount: event.target.value })} placeholder="Contoh: 15.00" /></label>
-              <label className="span-two">Alasan koreksi<input required minLength={3} maxLength={300} value={adjustmentDraft.description} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, description: event.target.value })} placeholder="Contoh: penyesuaian setelah audit kas" /></label>
+              <label>Adjustment direction<select value={adjustmentDraft.direction} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, direction: event.target.value })}><option value="OUT">Decrease balance</option><option value="IN">Increase balance</option></select></label>
+              <label>Amount (USD)<input required type="number" min="0.01" step="0.01" value={adjustmentDraft.amount} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, amount: event.target.value })} placeholder="Example: 15.00" /></label>
+              <label className="span-two">Adjustment reason<input required minLength={3} maxLength={300} value={adjustmentDraft.description} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, description: event.target.value })} placeholder="Example: adjustment after cash audit" /></label>
             </div>
-            <button className="button button-outline" disabled={busy || !adjustmentDraft.amount || !adjustmentDraft.description.trim()}><SlidersHorizontal size={15}/> Simpan koreksi saldo</button>
+            <button className="button button-outline" disabled={busy || !adjustmentDraft.amount || !adjustmentDraft.description.trim()}><SlidersHorizontal size={15}/> Save balance adjustment</button>
           </form>
         </div>}
-        <div className="panel-subheading cash-history-heading"><div><h4>Riwayat pemasukan dan pengeluaran</h4><small>Pemasukan pembelian otomatis saat order ditandai Completed.</small></div><div className="header-actions"><div className="filter-select compact"><select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value)}><option value="ALL">Semua</option><option value="IN">Pemasukan</option><option value="OUT">Pengeluaran</option></select><ChevronDown size={14}/></div><button type="button" className="button button-outline button-small" onClick={() => exportCashEntries(visibleCashEntries)} disabled={!visibleCashEntries.length}><ArrowDownToLine size={14}/> Export CSV</button></div></div>
+        <div className="panel-subheading cash-history-heading"><div><h4>Income and expense history</h4><small>Purchase income is recorded automatically when an order is marked Completed.</small></div><div className="header-actions"><div className="filter-select compact"><select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value)}><option value="ALL">All</option><option value="IN">Income</option><option value="OUT">Expense</option></select><ChevronDown size={14}/></div><button type="button" className="button button-outline button-small" onClick={() => exportCashEntries(visibleCashEntries)} disabled={!visibleCashEntries.length}><ArrowDownToLine size={14}/> Export CSV</button></div></div>
         {visibleCashEntries.length ? <div className="cash-ledger-list">{visibleCashRows.map((entry) => {
           const positive = ['OPENING_BALANCE', 'ORDER_INCOME', 'ADJUSTMENT_IN'].includes(entry.type);
           return <div className="cash-ledger-row" key={entry.id}><div className={`cash-ledger-icon ${positive ? 'income' : 'expense'}`}>{positive ? <ArrowUpRight size={16}/> : <ArrowDownToLine size={16}/>}</div><div className="cash-ledger-main"><strong>{cashEntryLabel(entry)}</strong><span>{entry.description}</span><small>{entry.category}{entry.order?.orderNumber ? ` · ${entry.order.orderNumber} · ${entry.order.user?.username || ''}` : ''}</small><small>{dateTime(entry.createdAt)} · {entry.createdBy?.username || 'System'}</small></div><strong className={positive ? 'cash-positive' : 'cash-negative'}>{positive ? '+' : '−'}{money(entry.amount)}</strong></div>;
-        })}</div> : <EmptyState icon={Wallet} title="Tidak ada catatan" detail={ledgerFilter === 'ALL' ? 'Tetapkan saldo awal untuk mulai mencatat pemasukan dan pengeluaran gang.' : 'Tidak ada transaksi pada filter ini.'} />}
+        })}</div> : <EmptyState icon={Wallet} title="No records" detail={ledgerFilter === 'ALL' ? 'Set an opening balance to start tracking gang income and expenses.' : 'No transactions match this filter.'} />}
         {visibleCashEntries.length > cashPageSize && <DataPagination page={safeCashPage} pageSize={cashPageSize} total={visibleCashEntries.length} onPageChange={setCashPage} />}
       </section>
     </div>
-    <div className="finance-footnote"><ShieldCheck size={15}/><span>{cash.note} Total pembelanjaan sepanjang masa dihitung dari semua pesanan selesai dan tidak pernah dihapus saat periode di-reset.</span></div>
+    <div className="finance-footnote"><ShieldCheck size={15}/><span>{cash.note} Lifetime spending dihitung of semua completed orders dan tidak pernah dihapus saat periode di-reset.</span></div>
   </>;
 }
 
@@ -842,17 +842,17 @@ function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart
     setCart((current) => ({ ...current, [resource.id]: Math.min((current[resource.id] || 0) + 1, resource.stockAvailable) }));
   }
   return <>
-    <SectionHeader eyebrow="SAVED RESOURCES" title="Resource favorit" description="Simpan item yang sering dipesan agar lebih cepat ditemukan kembali." />
+    <SectionHeader eyebrow="SAVED ResourceS" title="Favorite resources" description="Save frequently ordered items for faster access." />
     {favorites.length ? <><div className="resource-grid">{visibleFavorites.map((resource) => <article className="resource-card" key={resource.id}>
       <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
         {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
         <div className="resource-art-grid"/><span>{categoryLabel(resource.category)}</span>{!resource.imageUrl && <div className="resource-art-icon"><Package size={30}/></div>}<small>{resource.sku}</small>
       </div>
-      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3><button type="button" className="favorite-toggle active" onClick={() => onToggleFavorite(resource)} title="Hapus favorit"><Star size={16} fill="currentColor"/></button></div>
-        <p>{resource.description || 'Tidak ada deskripsi.'}</p><div className="resource-meta"><span>Harga / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Stok tersedia</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
-        <button className="button button-primary button-full" disabled={busy || resource.stockAvailable <= 0 || (cart[resource.id] || 0) >= resource.stockAvailable} onClick={() => addToCart(resource)}><ShoppingCart size={15}/> Tambah ke keranjang</button>
+      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3><button type="button" className="favorite-toggle active" onClick={() => onToggleFavorite(resource)} title="Delete favorit"><Star size={16} fill="currentColor"/></button></div>
+        <p>{resource.description || 'No description.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+        <button className="button button-primary button-full" disabled={busy || resource.stockAvailable <= 0 || (cart[resource.id] || 0) >= resource.stockAvailable} onClick={() => addToCart(resource)}><ShoppingCart size={15}/> Add to cart</button>
       </div>
-    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={favorites.length} onPageChange={setPage} /></> : <div className="panel"><EmptyState icon={Star} title="Belum ada resource favorit" detail="Buka katalog lalu tekan ikon bintang pada resource yang ingin kamu simpan."/></div>}
+    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={favorites.length} onPageChange={setPage} /></> : <div className="panel"><EmptyState icon={Star} title="No favorite resources yet" detail="Open the catalog and select the star icon on any resource you want to save."/></div>}
   </>;
 }
 
@@ -874,15 +874,15 @@ function StockMovementPage({ movements }) {
   const filtered = movements.filter((movement) => type === 'ALL' || movement.type === type);
   const visibleMovements = filtered.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => setPage(1), [type, movements]);
-  const labels = { RESTOCK: 'Stok masuk', ADJUSTMENT: 'Koreksi stok', RESERVED: 'Dicadangkan', RELEASED: 'Reservasi dikembalikan', COMPLETED: 'Diserahkan' };
+  const labels = { RESTOCK: 'Stock In', ADJUSTMENT: 'Stock Adjustment', RESERVED: 'Reserved', RELEASED: 'Reservation Released', COMPLETED: 'Handed Over' };
   function exportMovements() {
     const rows = filtered.map((m) => [dateTime(m.createdAt), m.resource?.name, m.resource?.sku, labels[m.type] || m.type, m.quantity, m.resource?.unit, m.order?.orderNumber, m.user?.username || 'System', m.note]);
-    downloadCsv(`30sFams-stock-movements-${new Date().toISOString().slice(0,10)}.csv`, ['Waktu', 'Resource', 'SKU', 'Aktivitas', 'Jumlah', 'Satuan', 'Nomor Pesanan', 'Pelaksana', 'Catatan'], rows);
+    downloadCsv(`30sFams-stock-movements-${new Date().toISOString().slice(0,10)}.csv`, ['Date & Time', 'Resource', 'SKU', 'Activity', 'Quantity', 'Unit', 'Order Number', 'Performed By', 'Notes'], rows);
   }
   return <>
-    <SectionHeader eyebrow="INVENTORY AUDIT TRAIL" title="Riwayat keluar masuk stok" description="Semua restock, koreksi, reservasi, pengembalian reservasi, dan penyerahan resource tercatat di sini." action={<div className="header-actions"><div className="filter-select compact"><SlidersHorizontal size={15}/><select value={type} onChange={(event) => setType(event.target.value)}><option value="ALL">Semua aktivitas</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><ChevronDown size={14}/></div><button className="button button-outline button-small" onClick={exportMovements} disabled={!filtered.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
-    <div className="panel"><div className="panel-heading"><div><h3>Ledger stok</h3><p>{number(filtered.length)} catatan terbaru · maksimum 200 catatan</p></div><History size={19}/></div>
-      {filtered.length ? <><div className="table-wrap"><table><thead><tr><th>Waktu</th><th>Resource</th><th>Aktivitas</th><th>Jumlah</th><th>Nomor pesanan</th><th>Pelaksana</th><th>Catatan</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={History} title="Belum ada catatan stok" detail="Aktivitas inventory akan tercatat saat stok dibuat, disesuaikan, dicadangkan, dikembalikan, atau diserahkan."/>}
+    <SectionHeader eyebrow="INVENTORY AUDIT TRAIL" title="Riwayat keluar masuk stok" description="All restock, koreksi, reservasi, pengembalian reservasi, dan penyerahan resource tercatat di sini." action={<div className="header-actions"><div className="filter-select compact"><SlidersHorizontal size={15}/><select value={type} onChange={(event) => setType(event.target.value)}><option value="ALL">All aktivitas</option>{Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><ChevronDown size={14}/></div><button className="button button-outline button-small" onClick={exportMovements} disabled={!filtered.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
+    <div className="panel"><div className="panel-heading"><div><h3>Stock Ledger</h3><p>{number(filtered.length)} latest records · maximum 200 records</p></div><History size={19}/></div>
+      {filtered.length ? <><div className="table-wrap"><table><thead><tr><th>Date & Time</th><th>Resource</th><th>Activity</th><th>Quantity</th><th>Order number</th><th>Performed By</th><th>Notes</th></tr></thead><tbody>{visibleMovements.map((movement) => <tr key={movement.id}><td>{dateTime(movement.createdAt)}</td><td><strong>{movement.resource?.name || 'Resource'}</strong><small className="cell-sub">{movement.resource?.sku || ''}</small></td><td><span className={`stock-tag ${['RESTOCK','RELEASED'].includes(movement.type) ? 'in-stock' : movement.type === 'ADJUSTMENT' ? 'out-stock' : 'reserved'}`}>{labels[movement.type] || movement.type}</span></td><td className="strong-cell">{number(movement.quantity)} {movement.resource?.unit || 'unit'}</td><td>{movement.order?.orderNumber || '—'}</td><td>{movement.user?.username || 'System'}</td><td>{movement.note || '—'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={History} title="No stock records yet" detail="Activity inventory akan tercatat saat stok dibuat, disesuaikan, dicadangkan, dikembalikan, atau diserahkan."/>}
     </div>
   </>;
 }
@@ -891,27 +891,27 @@ function MemberStatsPage({ data }) {
   const [page, setPage] = useState(1);
   const pageSize = 25;
   useEffect(() => setPage(1), [data?.members]);
-  if (!data) return <div className="panel loading-panel">Memuat statistik anggota...</div>;
+  if (!data) return <div className="panel loading-panel">Loading member statistics...</div>;
   const summary = data.summary || {};
   const members = data.members || [];
   const visibleMembers = members.slice((page - 1) * pageSize, page * pageSize);
   function exportMembers() {
-    const rows = members.map((m) => [m.username, m.email, m.deletedAt ? 'Dihapus' : m.isActive ? 'Aktif' : 'Nonaktif', m.registrationStatus, m.completedOrders, m.completedQuantity, m.totalSpend, m.pendingOrders, m.approvedOrders, m.lastCompletedAt ? dateTime(m.lastCompletedAt) : '']);
-    downloadCsv(`30sFams-member-statistics-${new Date().toISOString().slice(0,10)}.csv`, ['Username', 'Email', 'Status Akun', 'Status Pendaftaran', 'Pesanan Selesai', 'Total Kuantitas', 'Total Pembelanjaan USD', 'Pending', 'Approved', 'Pembelian Terakhir'], rows);
+    const rows = members.map((m) => [m.username, m.email, m.deletedAt ? 'Deleted' : m.isActive ? 'Active' : 'Inactive', m.registrationStatus, m.completedOrders, m.completedQuantity, m.totalSpend, m.pendingOrders, m.approvedOrders, m.lastCompletedAt ? dateTime(m.lastCompletedAt) : '']);
+    downloadCsv(`30sFams-member-statistics-${new Date().toISOString().slice(0,10)}.csv`, ['Membername', 'Email', 'Account Status', 'Registration Status', 'Orders Completed', 'Total Quantity', 'Total Spending (USD)', 'Pending', 'Approved', 'Last Purchase'], rows);
   }
   return <>
-    <SectionHeader eyebrow="MEMBER INSIGHTS" title="Statistik anggota" description="Pantau aktivitas pemesanan setiap anggota berdasarkan pesanan yang sudah Completed." action={<div className="header-actions"><div className="date-chip"><ShieldCheck size={15}/> Admin only</div><button className="button button-outline button-small" onClick={exportMembers} disabled={!members.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
-    <div className="stats-grid"><StatCard label="Total anggota" value={number(summary.totalMembers)} detail={`${number(summary.activeMembers)} akun aktif`} icon={Users} tone="blue"/><StatCard label="Menunggu aktivasi" value={number(summary.pendingRegistrations)} detail="Pendaftaran baru" icon={Clock3} tone="orange"/><StatCard label="Pesanan selesai" value={number(summary.completedOrders)} detail={`${number(summary.completedQuantity)} unit`} icon={Package} tone="green"/><StatCard label="Total pembelanjaan" value={money(summary.completedAmount)} detail="Akumulasi seluruh anggota" icon={CircleDollarSign} tone="purple"/></div>
-    <div className="panel"><div className="panel-heading"><div><h3>Aktivitas pembelian anggota</h3><p>Diurutkan berdasarkan total pembelanjaan selesai tertinggi.</p></div><Users size={19}/></div>
-      {members.length ? <><div className="table-wrap"><table><thead><tr><th>Anggota</th><th>Status akun</th><th>Pesanan selesai</th><th>Total kuantitas</th><th>Total pembelanjaan</th><th>Order aktif</th><th>Pembelian terakhir</th></tr></thead><tbody>{visibleMembers.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${!member.deletedAt && member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.deletedAt ? 'Dihapus' : member.registrationStatus === 'PENDING' ? 'Menunggu' : member.registrationStatus === 'REJECTED' ? 'Ditolak' : member.isActive ? 'Aktif' : 'Nonaktif'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'Belum ada'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={members.length} onPageChange={setPage} /></> : <EmptyState icon={Users} title="Belum ada anggota" detail="Anggota yang mendaftar akan muncul di sini."/>}
+    <SectionHeader eyebrow="MEMBER INSIGHTS" title="Member Statistics" description="Pantau aktivitas pemesanan setiap anggota berdasarkan pesanan yang sudah Completed." action={<div className="header-actions"><div className="date-chip"><ShieldCheck size={15}/> Super Admin only</div><button className="button button-outline button-small" onClick={exportMembers} disabled={!members.length}><ArrowDownToLine size={14}/> Export CSV</button></div>} />
+    <div className="stats-grid"><StatCard label="Total members" value={number(summary.totalMembers)} detail={`${number(summary.activeMembers)} active accounts`} icon={Members} tone="blue"/><StatCard label="Pending aktivasi" value={number(summary.pendingRegistrations)} detail="New registrations" icon={Clock3} tone="orange"/><StatCard label="Completed orders" value={number(summary.completedOrders)} detail={`${number(summary.completedQuantity)} unit`} icon={Package} tone="green"/><StatCard label="Total spending" value={money(summary.completedAmount)} detail="All members combined" icon={CircleDollarSign} tone="purple"/></div>
+    <div className="panel"><div className="panel-heading"><div><h3>Activity pembelian anggota</h3><p>Sorted by highest completed spending.</p></div><Members size={19}/></div>
+      {members.length ? <><div className="table-wrap"><table><thead><tr><th>Member</th><th>Account status</th><th>Completed orders</th><th>Total quantity</th><th>Total spending</th><th>Active orders</th><th>Last purchase</th></tr></thead><tbody>{visibleMembers.map((member) => <tr key={member.id}><td><strong>{member.username}</strong><small className="cell-sub">{member.email}</small></td><td><span className={`stock-tag ${!member.deletedAt && member.isActive && member.registrationStatus === 'APPROVED' ? 'in-stock' : 'out-stock'}`}>{member.deletedAt ? 'Deleted' : member.registrationStatus === 'PENDING' ? 'Pending' : member.registrationStatus === 'REJECTED' ? 'Rejected' : member.isActive ? 'Active' : 'Inactive'}</span></td><td>{number(member.completedOrders)}</td><td>{number(member.completedQuantity)} unit</td><td className="strong-cell">{money(member.totalSpend)}</td><td>{number(member.pendingOrders)} Pending · {number(member.approvedOrders)} Approved</td><td>{member.lastCompletedAt ? dateTime(member.lastCompletedAt) : 'None yet'}</td></tr>)}</tbody></table></div><DataPagination page={page} pageSize={pageSize} total={members.length} onPageChange={setPage} /></> : <EmptyState icon={Members} title="None yet anggota" detail="Member yang mendaftar akan muncul di sini."/>}
     </div>
   </>;
 }
 
 function exportCashEntries(entries) {
-  const headers = ['Tanggal', 'Jenis', 'Kategori', 'Deskripsi', 'Nominal USD', 'Username Admin', 'Nomor Pesanan'];
-  const typeLabel = { OPENING_BALANCE: 'Saldo awal', ORDER_INCOME: 'Pemasukan pesanan', ADJUSTMENT_IN: 'Pemasukan/koreksi masuk', EXPENSE: 'Pengeluaran', ADJUSTMENT_OUT: 'Koreksi keluar' };
-  const rows = entries.map((entry) => [new Date(entry.createdAt).toLocaleString('id-ID'), typeLabel[entry.type] || entry.type, entry.category, entry.description, entry.amount, entry.createdBy?.username || 'System', entry.order?.orderNumber || '']);
+  const headers = ['Date', 'Type', 'Category', 'Description', 'Amount USD', 'Membername Super Admin', 'Order Number'];
+  const typeLabel = { OPENING_BALANCE: 'Opening balance', ORDER_INCOME: 'Order income', ADJUSTMENT_IN: 'Income/koreksi masuk', EXPENSE: 'Expense', ADJUSTMENT_OUT: 'Negative adjustment' };
+  const rows = entries.map((entry) => [new Date(entry.createdAt).toLocaleString('en-US'), typeLabel[entry.type] || entry.type, entry.category, entry.description, entry.amount, entry.createdBy?.username || 'System', entry.order?.orderNumber || '']);
   const safe = (value) => { let text = String(value ?? ''); if (/^[\s]*[=+@\-]/.test(text)) text = `'${text}`; return `"${text.replaceAll('"', '""')}"`; };
   const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(safe).join(';')).join('\r\n')}`;
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
@@ -919,12 +919,12 @@ function exportCashEntries(entries) {
 }
 
 const MANUAL_NOTE_CATEGORIES = [
-  { value: 'UMUM', label: 'Umum' },
-  { value: 'OPERASIONAL', label: 'Operasional' },
-  { value: 'STOK', label: 'Stok' },
-  { value: 'PESANAN', label: 'Pesanan' },
-  { value: 'PENGUMUMAN', label: 'Pengumuman' },
-  { value: 'LAINNYA', label: 'Lainnya' },
+  { value: 'UMUM', label: 'General' },
+  { value: 'OPERASIONAL', label: 'Operations' },
+  { value: 'STOK', label: 'Stock' },
+  { value: 'PESANAN', label: 'Orders' },
+  { value: 'PENGUMUMAN', label: 'Announcements' },
+  { value: 'LAINNYA', label: 'Other' },
 ];
 
 function ManualNotesPage({ notes = [], onSave, onDelete, busy }) {
@@ -975,34 +975,34 @@ function ManualNotesPage({ notes = [], onSave, onDelete, busy }) {
   return <>
     <SectionHeader
       eyebrow="ADMIN NOTES & RECORDS"
-      title="Log Catatan"
-      description="Catatan manual untuk informasi operasional, stok, pesanan, pengumuman, dan hal penting lainnya."
-      action={<button className="button button-primary" onClick={openCreate}><FileText size={16} /> Tambah catatan</button>}
+      title="Log Notes"
+      description="Notes manual untuk informasi operasional, stok, pesanan, pengumuman, dan hal penting lainnya."
+      action={<button className="button button-primary" onClick={openCreate}><FileText size={16} /> Add Note</button>}
     />
 
     {showForm && <form className="panel create-resource-form manual-note-form" onSubmit={submit}>
       <div className="panel-heading">
-        <div><h3>{editingId ? 'Edit catatan' : 'Catatan baru'}</h3><p>Catatan ini hanya dapat dilihat dan dikelola oleh Super Admin.</p></div>
-        <button type="button" className="icon-button" disabled={busy} onClick={() => { setShowForm(false); setEditingId(null); }} aria-label="Tutup"><X size={17} /></button>
+        <div><h3>{editingId ? 'Edit Note' : 'Notes baru'}</h3><p>Notes ini hanya dapat dilihat dan dikelola oleh Super Super Admin.</p></div>
+        <button type="button" className="icon-button" disabled={busy} onClick={() => { setShowForm(false); setEditingId(null); }} aria-label="Close"><X size={17} /></button>
       </div>
       <div className="form-grid manual-note-fields">
-        <label>Judul catatan<input required minLength={3} maxLength={120} value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Contoh: Catatan operasional minggu ini" /></label>
-        <label>Kategori<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{MANUAL_NOTE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-        <label className="span-two">Isi catatan<textarea required maxLength={20000} rows={7} value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} placeholder="Tuliskan catatan secara detail di sini..." /></label>
+        <label>Note title<input required minLength={3} maxLength={120} value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Contoh: Notes operasional minggu ini" /></label>
+        <label>Category<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{MANUAL_NOTE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+        <label className="span-two">Note content<textarea required maxLength={20000} rows={7} value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} placeholder="Write your notes in detail here..." /></label>
       </div>
       <div className="form-footer">
-        <button type="button" className="button button-ghost" disabled={busy} onClick={() => { setShowForm(false); setEditingId(null); }}>Batal</button>
-        <button className="button button-primary" disabled={busy || draft.title.trim().length < 3 || !draft.content.trim()}><Check size={15} /> {busy ? 'Menyimpan...' : editingId ? 'Simpan perubahan' : 'Simpan catatan'}</button>
+        <button type="button" className="button button-ghost" disabled={busy} onClick={() => { setShowForm(false); setEditingId(null); }}>Cancel</button>
+        <button className="button button-primary" disabled={busy || draft.title.trim().length < 3 || !draft.content.trim()}><Check size={15} /> {busy ? 'Saving...' : editingId ? 'Save changes' : 'Save note'}</button>
       </div>
     </form>}
 
     <div className="panel manual-notes-panel">
       <div className="panel-heading">
-        <div><h3>Daftar catatan</h3><p>{number(filtered.length)} catatan ditemukan · {number(notes.length)} total tersimpan</p></div>
-        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="ALL">Semua kategori</option>{MANUAL_NOTE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><ChevronDown size={14} /></div>
+        <div><h3>Notes List</h3><p>{number(filtered.length)} notes found · {number(notes.length)} saved in total</p></div>
+        <div className="filter-select compact"><SlidersHorizontal size={15} /><select value={filter} onChange={(event) => setFilter(event.target.value)}><option value="ALL">All categories</option>{MANUAL_NOTE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><ChevronDown size={14} /></div>
       </div>
       <div className="catalog-toolbar manual-notes-toolbar">
-        <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari judul, isi, atau pembuat catatan..." /></div>
+        <div className="search-box"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search note title, content, or author..." /></div>
       </div>
       {visible.length ? <>
         <div className="manual-notes-grid">{visible.map((note) => {
@@ -1012,15 +1012,15 @@ function ManualNotesPage({ notes = [], onSave, onDelete, busy }) {
             <div className="manual-note-card-top"><span className="manual-note-category">{categoryLabelText}</span><time>{dateTime(note.createdAt)}</time></div>
             <h3>{note.title}</h3>
             <p className="manual-note-content">{note.content}</p>
-            <div className="manual-note-meta"><span>Oleh <strong>{note.createdBy?.username || 'Akun dihapus'}</strong></span>{updated && <span>Diperbarui {dateTime(note.updatedAt)}</span>}</div>
+            <div className="manual-note-meta"><span>By <strong>{note.createdBy?.username || 'Deleted account'}</strong></span>{updated && <span>Updated {dateTime(note.updatedAt)}</span>}</div>
             <div className="manual-note-actions">
               <button className="button button-small button-outline" disabled={busy} onClick={() => openEdit(note)}><Pencil size={13} /> Edit</button>
-              <button className="action-button reject" disabled={busy} onClick={() => onDelete(note)} title="Hapus catatan"><Trash2 size={14} /></button>
+              <button className="action-button reject" disabled={busy} onClick={() => onDelete(note)} title="Delete catatan"><Trash2 size={14} /></button>
             </div>
           </article>;
         })}</div>
         <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
-      </> : <EmptyState icon={FileText} title="Belum ada catatan" detail={notes.length ? 'Tidak ada catatan yang cocok dengan pencarian atau kategori ini.' : 'Tambahkan catatan manual pertama untuk mulai menyimpan informasi operasional.'} />}
+      </> : <EmptyState icon={FileText} title="None yet catatan" detail={notes.length ? 'No records yang cocok dengan pencarian atau kategori ini.' : 'Add your first manual note to start documenting operational information.'} />}
     </div>
   </>;
 }
@@ -1031,37 +1031,37 @@ function ActivityPage({ logs, discordStatus, onTestDiscord, busy }) {
   const visibleLogs = logs.slice((page - 1) * pageSize, page * pageSize);
   useEffect(() => setPage(1), [logs]);
   return <>
-    <SectionHeader eyebrow="AUDIT TRAIL & INTEGRATIONS" title="Aktivitas admin" description="Jejak perubahan resource, stok, status pesanan, dan pengujian integrasi." action={<button className="button button-outline" disabled={busy || !discordStatus?.configured} onClick={onTestDiscord}><Bell size={15}/> Tes Discord</button>} />
-    <div className="panel integration-status-panel"><div className="panel-heading"><div><h3>Integrasi Discord</h3><p>URL webhook hanya disimpan di backend/.env dan tidak ditampilkan di browser.</p></div><div className={`stock-tag ${discordStatus?.configured ? 'in-stock' : 'out-stock'}`}>{discordStatus?.configured ? 'Webhook terkonfigurasi' : 'Belum dikonfigurasi'}</div></div><p className="muted-copy">{discordStatus?.message || 'Memeriksa konfigurasi Discord...'}</p><small>Untuk mengaktifkan, isi DISCORD_WEBHOOK_URL di backend/.env, lalu restart backend. Gunakan channel Discord privat yang hanya dapat diakses petinggi/admin.</small></div>
-    <div className="panel">{logs.length ? <><div className="activity-list">{visibleLogs.map((log) => <div className="activity-row" key={log.id}><div className="activity-icon"><Activity size={17} /></div><div className="activity-content"><strong>{log.detail}</strong><span>{log.user?.username || 'System'} · {log.action}</span></div><time>{dateTime(log.createdAt)}</time></div>)}</div><DataPagination page={page} pageSize={pageSize} total={logs.length} onPageChange={setPage} /></> : <EmptyState icon={Activity} title="Belum ada aktivitas" detail="Aktivitas admin akan tercatat di sini." />}</div>
+    <SectionHeader eyebrow="AUDIT TRAIL & INTEGRATIONS" title="Activity admin" description="A record of resource changes, stock movements, order status updates, and integration tests." action={<button className="button button-outline" disabled={busy || !discordStatus?.configured} onClick={onTestDiscord}><Bell size={15}/> Test Discord</button>} />
+    <div className="panel integration-status-panel"><div className="panel-heading"><div><h3>Discord Integration</h3><p>The webhook URL is stored in backend/.env and is never displayed in the browser.</p></div><div className={`stock-tag ${discordStatus?.configured ? 'in-stock' : 'out-stock'}`}>{discordStatus?.configured ? 'Webhook configured' : 'Not configured'}</div></div><p className="muted-copy">{discordStatus?.message || 'Checking Discord configuration...'}</p><small>To enable this integration, set DISCORD_WEBHOOK_URL in backend/.env and restart the backend. Use a private Discord channel accessible only to authorized staff.</small></div>
+    <div className="panel">{logs.length ? <><div className="activity-list">{visibleLogs.map((log) => <div className="activity-row" key={log.id}><div className="activity-icon"><Activity size={17} /></div><div className="activity-content"><strong>{log.detail}</strong><span>{log.user?.username || 'System'} · {log.action}</span></div><time>{dateTime(log.createdAt)}</time></div>)}</div><DataPagination page={page} pageSize={pageSize} total={logs.length} onPageChange={setPage} /></> : <EmptyState icon={Activity} title="None yet aktivitas" detail="Activity admin akan tercatat di sini." />}</div>
   </>;
 }
 
 const adminNav = [
-  { key: 'dashboard', label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
-  { key: 'catalog', label: 'Katalog & pesan', icon: ShoppingCart, group: 'WORKSPACE' },
-  { key: 'my-orders', label: 'Pesanan saya', icon: ClipboardList, group: 'WORKSPACE' },
-  { key: 'inventory', label: 'Manajemen stok', icon: Boxes, group: 'WORKSPACE' },
-  { key: 'stash', label: 'Stash / Brangkas', icon: Archive, group: 'WORKSPACE' },
-  { key: 'stock-history', label: 'Riwayat stok', icon: History, group: 'WORKSPACE' },
-  { key: 'notes', label: 'Log Catatan', icon: FileText, group: 'WORKSPACE' },
-  { key: 'admin-orders', label: 'Semua pesanan', icon: ClipboardList, group: 'WORKSPACE' },
-  { key: 'archived-orders', label: 'Arsip pesanan', icon: Archive, group: 'WORKSPACE' },
-  { key: 'reports', label: 'Laporan transaksi', icon: ChartNoAxesCombined, group: 'INSIGHTS' },
-  { key: 'finance', label: 'Keuangan & kas gang', icon: Wallet, group: 'INSIGHTS' },
-  { key: 'users', label: 'Pengguna', icon: Users, group: 'INSIGHTS' },
-  { key: 'member-stats', label: 'Statistik anggota', icon: ChartNoAxesCombined, group: 'INSIGHTS' },
-  { key: 'activity', label: 'Aktivitas admin', icon: Activity, group: 'INSIGHTS' },
+  { key: 'dashboard', label: 'Overview', icon: LayoutOverview, group: 'WORKSPACE' },
+  { key: 'catalog', label: 'Catalog & Orders', icon: ShoppingCart, group: 'WORKSPACE' },
+  { key: 'my-orders', label: 'Orders saya', icon: ClipboardList, group: 'WORKSPACE' },
+  { key: 'inventory', label: 'Inventory Management', icon: Boxes, group: 'WORKSPACE' },
+  { key: 'stash', label: 'Stash', icon: Archive, group: 'WORKSPACE' },
+  { key: 'stock-history', label: 'Stock History', icon: History, group: 'WORKSPACE' },
+  { key: 'notes', label: 'Log Notes', icon: FileText, group: 'WORKSPACE' },
+  { key: 'admin-orders', label: 'All pesanan', icon: ClipboardList, group: 'WORKSPACE' },
+  { key: 'archived-orders', label: 'Archived pesanan', icon: Archive, group: 'WORKSPACE' },
+  { key: 'reports', label: 'Transaction Reports', icon: ChartNoAxesCombined, group: 'INSIGHTS' },
+  { key: 'finance', label: 'Finance & Gang Fund', icon: Wallet, group: 'INSIGHTS' },
+  { key: 'users', label: 'Members', icon: Members, group: 'INSIGHTS' },
+  { key: 'member-stats', label: 'Member Statistics', icon: ChartNoAxesCombined, group: 'INSIGHTS' },
+  { key: 'activity', label: 'Activity admin', icon: Activity, group: 'INSIGHTS' },
 ];
 const userNav = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'MENU UTAMA' },
-  { key: 'catalog', label: 'Katalog resource', icon: Boxes, group: 'MENU UTAMA' },
-  { key: 'favorites', label: 'Resource favorit', icon: Star, group: 'MENU UTAMA' },
-  { key: 'my-orders', label: 'Pesanan saya', icon: ClipboardList, group: 'MENU UTAMA' },
+  { key: 'dashboard', label: 'Overview', icon: LayoutOverview, group: 'MAIN MENU' },
+  { key: 'catalog', label: 'Resource Catalog', icon: Boxes, group: 'MAIN MENU' },
+  { key: 'favorites', label: 'Favorite resources', icon: Star, group: 'MAIN MENU' },
+  { key: 'my-orders', label: 'Orders saya', icon: ClipboardList, group: 'MAIN MENU' },
 ];
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setMember] = useState(null);
   const [booting, setBooting] = useState(true);
   const [page, setPageState] = useState(readPageFromUrl);
   const pageRef = useRef(page);
@@ -1079,17 +1079,17 @@ export default function App() {
   }, []);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageLoadError, setPageLoadError] = useState(null);
-  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardData, setOverviewData] = useState(null);
   const [resources, setResources] = useState([]); // Catalog resources (and member dashboard data).
   const [inventoryResources, setInventoryResources] = useState([]);
   const [stashResources, setStashResources] = useState([]);
-  const [orders, setOrders] = useState([]); // Member orders / Super Admin all-orders page.
-  const [adminMyOrders, setAdminMyOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // Member orders / Super Super Admin all-orders page.
+  const [adminMyOrders, setSuper AdminMyOrders] = useState([]);
   const [archivedOrders, setArchivedOrders] = useState([]);
   const [reports, setReports] = useState(null);
   const [finance, setFinance] = useState(null);
   const [cash, setCash] = useState(null);
-  const [users, setUsers] = useState([]);
+  const [users, setMembers] = useState([]);
   const [logs, setLogs] = useState([]);
   const [memberStats, setMemberStats] = useState(null);
   const [stockMovements, setStockMovements] = useState([]);
@@ -1105,10 +1105,10 @@ export default function App() {
   const [notice, setNotice] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoading, setDetailsLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
-  const isAdmin = user?.role === 'ADMIN';
+  const isSuper Admin = user?.role === 'ADMIN';
   const pageCacheRef = useRef({});
   const pageRequestsRef = useRef({});
   const loadedPagesRef = useRef(new Set());
@@ -1137,7 +1137,7 @@ export default function App() {
         switch (targetPage) {
           case 'dashboard': {
             const data = await api('/admin/dashboard');
-            setDashboardData(data);
+            setOverviewData(data);
             setOrders(data.recentOrders || []);
             break;
           }
@@ -1148,7 +1148,7 @@ export default function App() {
           }
           case 'my-orders': {
             const data = await api('/orders/mine');
-            setAdminMyOrders(data.orders || []);
+            setSuper AdminMyOrders(data.orders || []);
             break;
           }
           case 'inventory': {
@@ -1176,7 +1176,7 @@ export default function App() {
             break;
           case 'users': {
             const data = await api('/admin/users');
-            setUsers(data.users || []);
+            setMembers(data.users || []);
             break;
           }
           case 'activity': {
@@ -1258,8 +1258,8 @@ export default function App() {
     try {
       await loadPageData(page, user.role, true);
     } catch (error) {
-      setPageLoadError({ key: currentPageKey, message: error.message || 'Data halaman gagal dimuat.' });
-      setNoticeSafe({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
+      setPageLoadError({ key: currentPageKey, message: error.message || 'Failed to load page data.' });
+      setNoticeSafe({ type: 'error', message: error.message || 'Failed to load page data.' });
     }
   }
 
@@ -1271,7 +1271,7 @@ export default function App() {
   }, [user?.id]);
 
   useEffect(() => {
-    api('/auth/me').then((result) => { setUser(result.user); }).catch(() => setUser(null)).finally(() => setBooting(false));
+    api('/auth/me').then((result) => { setMember(result.user); }).catch(() => setMember(null)).finally(() => setBooting(false));
   }, []);
 
   useEffect(() => {
@@ -1279,8 +1279,8 @@ export default function App() {
     const pageKey = `${user.role}:${user.id}:${page}`;
     setPageLoadError(null);
     loadPageData(page, user.role).catch((error) => {
-      setPageLoadError({ key: pageKey, message: error.message || 'Data halaman gagal dimuat.' });
-      setNotice({ type: 'error', message: error.message || 'Data halaman gagal dimuat.' });
+      setPageLoadError({ key: pageKey, message: error.message || 'Failed to load page data.' });
+      setNotice({ type: 'error', message: error.message || 'Failed to load page data.' });
     });
   }, [user?.id, user?.role, page, loadPageData]);
 
@@ -1340,7 +1340,7 @@ export default function App() {
     };
   }, [user?.id, user?.role, page, loadPageData, refreshNotifications]);
 
-  const navItems = isAdmin ? adminNav : userNav;
+  const navItems = isSuper Admin ? adminNav : userNav;
   useEffect(() => {
     const onPopState = () => {
       const nextPage = readPageFromUrl();
@@ -1355,12 +1355,12 @@ export default function App() {
     if (!user) return;
     if (!navItems.some((item) => item.key === page)) setPage('dashboard');
   }, [user?.id, user?.role, page, navItems, setPage]);
-  const pageTitle = useMemo(() => navItems.find((item) => item.key === page)?.label || 'Dashboard', [navItems, page]);
+  const pageTitle = useMemo(() => navItems.find((item) => item.key === page)?.label || 'Overview', [navItems, page]);
   const setNoticeSafe = (value) => { setNotice(value); if (value) window.setTimeout(() => setNotice(null), 5500); };
 
-  async function openOrderDetail(order) {
+  async function openOrderDetails(order) {
     setSelectedOrder(null);
-    setDetailLoading(true);
+    setDetailsLoading(true);
     try {
       const endpoint = user?.role === 'ADMIN' ? `/admin/orders/${order.id}` : `/orders/${order.id}`;
       const result = await api(endpoint);
@@ -1368,14 +1368,14 @@ export default function App() {
     } catch (error) {
       setNoticeSafe({ type: 'error', message: error.message });
     } finally {
-      setDetailLoading(false);
+      setDetailsLoading(false);
     }
   }
 
   async function signOut() {
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* local state is still cleared */ }
     pageCacheRef.current = {}; pageRequestsRef.current = {}; loadedPagesRef.current.clear(); setLoadedPages({});
-    setUser(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setAdminMyOrders([]); setArchivedOrders([]); setManualNotes([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
+    setMember(null); setResources([]); setInventoryResources([]); setStashResources([]); setOrders([]); setSuper AdminMyOrders([]); setArchivedOrders([]); setManualNotes([]); setNotifications([]); setUnreadCount(0); setFavoriteIds([]); setDiscordStatus(null); setCart({}); setPage('dashboard');
   }
 
   async function saveManualNote(data, noteId = null) {
@@ -1386,7 +1386,7 @@ export default function App() {
         body: JSON.stringify(data),
       });
       await refresh();
-      setNoticeSafe({ type: 'success', message: noteId ? 'Catatan berhasil diperbarui.' : 'Catatan berhasil disimpan.' });
+      setNoticeSafe({ type: 'success', message: noteId ? 'Notes berresults diperbarui.' : 'Notes berresults disimpan.' });
       return Boolean(result.note);
     } catch (error) {
       setNoticeSafe({ type: 'error', message: error.message });
@@ -1397,12 +1397,12 @@ export default function App() {
   }
 
   async function deleteManualNote(note) {
-    if (!window.confirm(`Hapus catatan "${note.title}"? Catatan yang dihapus tidak dapat dikembalikan.`)) return;
+    if (!window.confirm(`Delete catatan "${note.title}"? Notes yang dihapus tidak dapat dikembalikan.`)) return;
     setBusy(true);
     try {
       await api(`/admin/notes/${note.id}`, { method: 'DELETE' });
       await refresh();
-      setNoticeSafe({ type: 'success', message: 'Catatan berhasil dihapus.' });
+      setNoticeSafe({ type: 'success', message: 'Notes berresults dihapus.' });
     } catch (error) {
       setNoticeSafe({ type: 'error', message: error.message });
     } finally {
@@ -1410,7 +1410,7 @@ export default function App() {
     }
   }
 
-  async function createUser(data) {
+  async function createMember(data) {
     setBusy(true);
     try {
       const result = await api('/admin/users', { method: 'POST', body: JSON.stringify(data) });
@@ -1431,9 +1431,9 @@ export default function App() {
     finally { setBusy(false); }
   }
 
-  async function changeUserRole(userRecord, role) {
-    const label = role === 'ADMIN' ? 'Super Admin' : 'Member';
-    if (!window.confirm(`Ubah role ${userRecord.username} menjadi ${label}? Sesi login akun tersebut akan dicabut.`)) return;
+  async function changeMemberRole(userRecord, role) {
+    const label = role === 'ADMIN' ? 'Super Super Admin' : 'Member';
+    if (!window.confirm(`Change the role of ${userRecord.username} to ${label}? This account will be signed out.`)) return;
     setBusy(true);
     try {
       const result = await api(`/admin/users/${userRecord.id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
@@ -1447,7 +1447,7 @@ export default function App() {
     }
   }
 
-  async function changeUserRank(userRecord, rank) {
+  async function changeMemberRank(userRecord, rank) {
     setBusy(true);
     try {
       const result = await api(`/admin/users/${userRecord.id}/rank`, { method: 'PATCH', body: JSON.stringify({ rank }) });
@@ -1460,9 +1460,9 @@ export default function App() {
     }
   }
 
-  async function deleteUser(userRecord) {
+  async function deleteMember(userRecord) {
     const confirmed = window.confirm(
-      `Hapus akun Member "${userRecord.username}"? Akun akan langsung kehilangan akses dan dihapus dari daftar anggota. Riwayat pesanan, stok, dan transaksi tetap disimpan untuk audit. Tindakan ini tidak dapat dibatalkan dari aplikasi.`
+      `Delete  account Member "${userRecord.username}"? Akun akan langsung kehilangan akses dan dihapus of daftar anggota. Riwayat pesanan, stok, dan transaksi tetap disimpan untuk audit. Tindakan ini tidak dapat dibatalkan of aplikasi.`
     );
     if (!confirmed) return;
     setBusy(true);
@@ -1478,9 +1478,9 @@ export default function App() {
     }
   }
 
-  async function toggleUser(userRecord) {
+  async function toggleMember(userRecord) {
     const nextActive = !userRecord.isActive;
-    if (!window.confirm(`${nextActive ? 'Aktifkan' : 'Nonaktifkan'} akun ${userRecord.username}? ${nextActive ? 'User dapat login kembali.' : 'User akan langsung kehilangan akses saat request berikutnya.'}`)) return;
+    if (!window.confirm(`${nextActive ? 'Activekan' : 'Inactivekan'}  account ${userRecord.username}? ${nextActive ? 'Member dapat login kembali.' : 'Member akan langsung kehilangan akses saat request berikutnya.'}`)) return;
     setBusy(true);
     try {
       const result = await api(`/admin/users/${userRecord.id}/status`, { method: 'PATCH', body: JSON.stringify({ isActive: nextActive }) });
@@ -1513,25 +1513,25 @@ export default function App() {
     finally { setBusy(false); }
   }
   async function startSpendingPeriod(payload) {
-    return financeRequest('/admin/finance/spending-periods', 'POST', payload, 'Periode pembelanjaan dibuat.');
+    return financeRequest('/admin/finance/spending-periods', 'POST', payload, 'Spending Period dibuat.');
   }
   async function updateSpendingPeriod(payload) {
-    return financeRequest('/admin/finance/spending-periods/current', 'PATCH', payload, 'Rentang periode diperbarui.');
+    return financeRequest('/admin/finance/spending-periods/current', 'PATCH', payload, 'Period range updated.');
   }
   async function resetSpendingPeriod(payload) {
-    return financeRequest('/admin/finance/spending-periods/reset', 'POST', payload, 'Periode pembelanjaan di-reset.');
+    return financeRequest('/admin/finance/spending-periods/reset', 'POST', payload, 'Spending Period di-reset.');
   }
   async function setCashOpeningBalance(payload) {
-    return financeRequest('/admin/finance/cash/opening-balance', 'POST', payload, 'Saldo awal kas disimpan.');
+    return financeRequest('/admin/finance/cash/opening-balance', 'POST', payload, 'Opening balance kas disimpan.');
   }
   async function addCashExpense(payload) {
-    return financeRequest('/admin/finance/cash/expenses', 'POST', payload, 'Pengeluaran kas dicatat.');
+    return financeRequest('/admin/finance/cash/expenses', 'POST', payload, 'Expense kas dicatat.');
   }
   async function addCashIncome(payload) {
-    return financeRequest('/admin/finance/cash/income', 'POST', payload, 'Penambahan saldo kas dicatat.');
+    return financeRequest('/admin/finance/cash/income', 'POST', payload, 'Cash balance increase recorded.');
   }
   async function adjustCash(payload) {
-    return financeRequest('/admin/finance/cash/adjustments', 'POST', payload, 'Koreksi saldo kas dicatat.');
+    return financeRequest('/admin/finance/cash/adjustments', 'POST', payload, 'Balance adjustment kas dicatat.');
   }
 
   async function testDiscord() {
@@ -1539,7 +1539,7 @@ export default function App() {
     try {
       const result = await api('/admin/integrations/discord/test', { method: 'POST', body: JSON.stringify({}) });
       await refresh();
-      setNoticeSafe({ type: 'success', message: result.message || 'Tes Discord berhasil.' });
+      setNoticeSafe({ type: 'success', message: result.message || 'Test Discord berresults.' });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1553,13 +1553,13 @@ export default function App() {
     try {
       if (!item.isRead) await api(`/notifications/${item.id}/read`, { method: 'PATCH' });
       await refreshNotifications();
-      if (item.type === 'ACCOUNT_REGISTRATION' && isAdmin) {
+      if (item.type === 'ACCOUNT_REGISTRATION' && isSuper Admin) {
         await refresh(user.role);
         setPage('users');
       } else if (item.orderId || item.order?.id) {
         // Refresh the order list first because notifications can arrive while another member is active.
         await refresh(user.role);
-        setPage(isAdmin ? 'admin-orders' : 'my-orders');
+        setPage(isSuper Admin ? 'admin-orders' : 'my-orders');
       }
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
   }
@@ -1570,12 +1570,12 @@ export default function App() {
       if (isFavorite) await api(`/favorites/${resource.id}`, { method: 'DELETE' });
       else await api(`/favorites/${resource.id}`, { method: 'POST', body: JSON.stringify({}) });
       setFavoriteIds((current) => isFavorite ? current.filter((id) => id !== resource.id) : [...current, resource.id]);
-      setNoticeSafe({ type: 'success', message: isFavorite ? `${resource.name} dihapus dari favorit.` : `${resource.name} ditambahkan ke favorit.` });
+      setNoticeSafe({ type: 'success', message: isFavorite ? `${resource.name} dihapus of favorit.` : `${resource.name} added to favorites.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
   }
 
   async function reorderOrder(order) {
-    if (!window.confirm(`Buat pesanan baru berdasarkan ${order.orderNumber}? Harga akan mengikuti harga resource saat ini dan stok akan diperiksa ulang.`)) return;
+    if (!window.confirm(`Create a new order based on ${order.orderNumber}? Current resource prices will apply, and stock availability will be checked again.`)) return;
     setBusy(true);
     try {
       const result = await api(`/orders/${order.id}/reorder`, { method: 'POST', body: JSON.stringify({}) });
@@ -1587,12 +1587,12 @@ export default function App() {
 
   async function cancelOwnOrder(order, action) {
     if (action !== 'cancel') return;
-    if (!window.confirm(`Batalkan pesanan ${order.orderNumber}? Stok yang sudah dicadangkan akan dikembalikan ke inventory.`)) return;
+    if (!window.confirm(`Cancelkan pesanan ${order.orderNumber}? Stock yang sudah dicadangkan akan dikembalikan ke inventory.`)) return;
     setBusy(true);
     try {
       const result = await api(`/orders/${order.id}/cancel`, { method: 'POST', body: JSON.stringify({}) });
       await Promise.all([refresh(), refreshNotifications()]);
-      setNoticeSafe({ type: 'success', message: result.order?.orderNumber ? `Pesanan ${result.order.orderNumber} berhasil dibatalkan.` : 'Pesanan berhasil dibatalkan.' });
+      setNoticeSafe({ type: 'success', message: result.order?.orderNumber ? `Orders ${result.order.orderNumber} berresults dibatalkan.` : 'Orders berresults dibatalkan.' });
     } catch (error) {
       setNoticeSafe({ type: 'error', message: error.message });
     } finally {
@@ -1607,7 +1607,7 @@ export default function App() {
     try {
       const result = await api('/orders', { method: 'POST', body: JSON.stringify({ items, notes }) });
       setCart({}); await Promise.all([refresh(), refreshNotifications()]); setPage('my-orders');
-      setNoticeSafe({ type: 'success', message: isAdmin ? `${result.order.orderNumber} dibuat atas nama akun Super Admin. Buka Semua Pesanan untuk meninjau dan memprosesnya.` : `${result.order.orderNumber} berhasil dikirim. Menunggu persetujuan admin.` });
+      setNoticeSafe({ type: 'success', message: isSuper Admin ? `${result.order.orderNumber} dibuat atas nama  account Super Super Admin. Buka All Orders untuk meninjau dan memprosesnya.` : `${result.order.orderNumber} berresults dikirim. Awaiting approval admin.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1615,31 +1615,31 @@ export default function App() {
   async function orderAction(order, action) {
     let adminNotes = '';
     let handoverNote = '';
-    const userCancel = !isAdmin && action === 'cancel';
-    if (isAdmin && action === 'complete') {
-      handoverNote = window.prompt(`Konfirmasi penyerahan langsung untuk ${order.orderNumber}. Catatan penyerahan (opsional):`, '') ?? null;
+    const userCancel = !isSuper Admin && action === 'cancel';
+    if (isSuper Admin && action === 'complete') {
+      handoverNote = window.prompt(`Confirm direct handover for ${order.orderNumber}. Notes penyerahan (opsional):`, '') ?? null;
       if (handoverNote === null) return;
     }
-    if (isAdmin && (action === 'reject' || action === 'cancel')) {
-      adminNotes = window.prompt(action === 'reject' ? 'Alasan penolakan (opsional):' : 'Catatan pembatalan (opsional):', '') ?? null;
+    if (isSuper Admin && (action === 'reject' || action === 'cancel')) {
+      adminNotes = window.prompt(action === 'reject' ? 'Reason for rejection (optional):' : 'Notes pembatalan (opsional):', '') ?? null;
       if (adminNotes === null) return;
     }
     const endpoint = userCancel ? `/orders/${order.id}/cancel` : `/admin/orders/${order.id}/${action}`;
     setBusy(true);
     try {
       await api(endpoint, { method: 'POST', body: JSON.stringify({ adminNotes, handoverNote }) });
-      await Promise.all([refresh(), refreshNotifications()]); setSelectedOrder(null); setNoticeSafe({ type: 'success', message: `Pesanan ${order.orderNumber} berhasil diperbarui.` });
+      await Promise.all([refresh(), refreshNotifications()]); setSelectedOrder(null); setNoticeSafe({ type: 'success', message: `Orders ${order.orderNumber} berresults diperbarui.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
 
   async function archiveAllOrders() {
-    if (!orders.length) { setNoticeSafe({ type: 'error', message: 'Tidak ada pesanan aktif untuk diarsipkan.' }); return; }
-    const typed = window.prompt(`Kamu akan mengarsipkan ${orders.length} pesanan aktif. Data pesanan, invoice, laporan, dan stok tetap tersimpan.
+    if (!orders.length) { setNoticeSafe({ type: 'error', message: 'Tidak ada active orders untuk diarchivedkan.' }); return; }
+    const typed = window.prompt(`Kamu akan mengarchivedkan ${orders.length} active orders. Data pesanan, invoice, laporan, dan stok tetap tersimpan.
 
-Ketik RESET 30SFAMS untuk melanjutkan:`);
-    if (typed !== 'RESET 30SFAMS') { if (typed !== null) setNoticeSafe({ type: 'error', message: 'Konfirmasi tidak cocok. Tidak ada pesanan yang diarsipkan.' }); return; }
-    const reason = window.prompt('Alasan pengarsipan (opsional):', 'Penutupan periode pemesanan 30sFams');
+Type RESET 30SFAMS to continue:`);
+    if (typed !== 'RESET 30SFAMS') { if (typed !== null) setNoticeSafe({ type: 'error', message: 'Konfirmasi tidak cocok. Tidak ada pesanan yang diarchivedkan.' }); return; }
+    const reason = window.prompt('Alasan pengarchivedan (opsional):', '30sFams order period closing');
     if (reason === null) return;
     setBusy(true);
     try {
@@ -1651,7 +1651,7 @@ Ketik RESET 30SFAMS untuk melanjutkan:`);
   }
 
   async function restoreArchivedOrder(order) {
-    if (!window.confirm(`Pulihkan ${order.orderNumber} ke daftar pesanan aktif? Status dan stok tidak akan diubah.`)) return;
+    if (!window.confirm(`Restore ${order.orderNumber} ke daftar active orders? Status dan stok tidak akan diubah.`)) return;
     setBusy(true);
     try {
       const result = await api(`/admin/orders/${order.id}/restore`, { method: 'POST' });
@@ -1663,14 +1663,14 @@ Ketik RESET 30SFAMS untuk melanjutkan:`);
 
   async function cancelAllActiveOrders() {
     const candidates = orders.filter((order) => ['PENDING', 'APPROVED'].includes(order.status));
-    if (!candidates.length) { setNoticeSafe({ type: 'error', message: 'Tidak ada pesanan Pending atau Approved yang bisa dibatalkan.' }); return; }
+    if (!candidates.length) { setNoticeSafe({ type: 'error', message: 'There are no Pending or Approved orders to cancel.' }); return; }
     const approved = candidates.filter((order) => order.status === 'APPROVED').length;
-    const proceed = window.confirm(`Batalkan ${candidates.length} pesanan aktif?
-${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. Pesanan Completed tidak diubah.`);
+    const proceed = window.confirm(`Cancelkan ${candidates.length} active orders?
+${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. Orders Completed tidak diubah.`);
     if (!proceed) return;
-    const typed = window.prompt('Aksi ini mengubah status pesanan dan stok. Ketik CANCEL 30SFAMS untuk melanjutkan:');
-    if (typed !== 'CANCEL 30SFAMS') { if (typed !== null) setNoticeSafe({ type: 'error', message: 'Konfirmasi tidak cocok. Tidak ada pesanan yang dibatalkan.' }); return; }
-    const reason = window.prompt('Alasan pembatalan massal:', 'Pembatalan massal oleh admin');
+    const typed = window.prompt('Actions ini mengubah status pesanan dan stok. Ketik CANCEL 30SFAMS untuk melanjutkan:');
+    if (typed !== 'CANCEL 30SFAMS') { if (typed !== null) setNoticeSafe({ type: 'error', message: 'Confirmation did not match. No orders were cancelled.' }); return; }
+    const reason = window.prompt('Reason for bulk cancellation:', 'Bulk cancellation by admin');
     if (reason === null) return;
     setBusy(true);
     try {
@@ -1690,20 +1690,20 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
 
   async function createResource(data) {
     setBusy(true);
-    try { await api('/resources', { method: 'POST', body: JSON.stringify(data) }); await refresh(); setNoticeSafe({ type: 'success', message: data.category === 'OTHER' ? 'Item berhasil ditambahkan ke Stash.' : 'Resource berhasil ditambahkan ke katalog.' }); return true; }
+    try { await api('/resources', { method: 'POST', body: JSON.stringify(data) }); await refresh(); setNoticeSafe({ type: 'success', message: data.category === 'OTHER' ? 'Item berresults ditambahkan ke Stash.' : 'Resource berresults ditambahkan ke katalog.' }); return true; }
     catch (error) { setNoticeSafe({ type: 'error', message: error.message }); return false; }
     finally { setBusy(false); }
   }
 
   async function adjustStock(resource) {
-    const raw = window.prompt(`Stok tersedia saat ini: ${resource.stockAvailable}\nMasukkan perubahan stok. Gunakan angka positif untuk menambah, negatif untuk mengurangi.`, '10');
+    const raw = window.prompt(`Available stock saat ini: ${resource.stockAvailable}\nEnter the stock adjustment. Use a positive number to add stock or a negative number to remove stock.`, '10');
     if (raw === null) return;
     const delta = Number(raw);
-    if (!Number.isInteger(delta) || delta === 0) { setNoticeSafe({ type: 'error', message: 'Masukkan bilangan bulat selain 0.' }); return; }
-    const note = window.prompt('Alasan perubahan stok:', delta > 0 ? 'Restock' : 'Penyesuaian stok');
+    if (!Number.isInteger(delta) || delta === 0) { setNoticeSafe({ type: 'error', message: 'Enter a non-zero whole number.' }); return; }
+    const note = window.prompt('Reason for stock adjustment:', delta > 0 ? 'Restock' : 'Stock adjustment');
     if (note === null || note.trim().length < 3) return;
     setBusy(true);
-    try { await api(`/resources/${resource.id}/stock`, { method: 'PATCH', body: JSON.stringify({ delta, note }) }); await refresh(); setNoticeSafe({ type: 'success', message: `Stok ${resource.name} berhasil diperbarui.` }); }
+    try { await api(`/resources/${resource.id}/stock`, { method: 'PATCH', body: JSON.stringify({ delta, note }) }); await refresh(); setNoticeSafe({ type: 'success', message: `Stock ${resource.name} berresults diperbarui.` }); }
     catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
@@ -1718,7 +1718,7 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
       await api(`/resources/${resourceId}`, { method: 'PATCH', body: JSON.stringify(changes) });
       await refresh();
       setEditingResource(null);
-      setNoticeSafe({ type: 'success', message: 'Data resource berhasil diperbarui.' });
+      setNoticeSafe({ type: 'success', message: 'Data resource berresults diperbarui.' });
       return true;
     } catch (error) {
       setNoticeSafe({ type: 'error', message: error.message });
@@ -1729,74 +1729,74 @@ ${approved} pesanan Approved akan mengembalikan stok cadangan ke stok tersedia. 
   }
 
   async function updateResourceImage(resource, file) {
-    if (!file.type.startsWith('image/')) { setNoticeSafe({ type: 'error', message: 'Pilih file gambar yang valid.' }); return; }
-    if (file.size > 5 * 1024 * 1024) { setNoticeSafe({ type: 'error', message: 'Ukuran gambar maksimal 5 MB.' }); return; }
+    if (!file.type.startsWith('image/')) { setNoticeSafe({ type: 'error', message: 'Please select a valid image file.' }); return; }
+    if (file.size > 5 * 1024 * 1024) { setNoticeSafe({ type: 'error', message: 'Image size must not exceed 5 MB.' }); return; }
     setBusy(true);
     try {
       await uploadFile(`/resources/${resource.id}/image`, file);
       await refresh();
-      setNoticeSafe({ type: 'success', message: `Gambar ${resource.name} berhasil diperbarui.` });
+      setNoticeSafe({ type: 'success', message: `Image for ${resource.name} berresults diperbarui.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
 
   async function removeResourceImage(resource) {
-    if (!window.confirm(`Hapus gambar ${resource.name}?`)) return;
+    if (!window.confirm(`Remove image ${resource.name}?`)) return;
     setBusy(true);
     try {
       await api(`/resources/${resource.id}/image`, { method: 'DELETE' });
       await refresh();
-      setNoticeSafe({ type: 'success', message: `Gambar ${resource.name} berhasil dihapus.` });
+      setNoticeSafe({ type: 'success', message: `Image for ${resource.name} berresults dihapus.` });
     } catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
 
   async function toggleResource(resource) {
     const nextActive = !resource.isActive;
-    const confirmed = window.confirm(`${nextActive ? 'Aktifkan' : 'Nonaktifkan'} ${resource.name}?`);
+    const confirmed = window.confirm(`${nextActive ? 'Activekan' : 'Inactivekan'} ${resource.name}?`);
     if (!confirmed) return;
     setBusy(true);
-    try { await api(`/resources/${resource.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: nextActive }) }); await refresh(); setNoticeSafe({ type: 'success', message: `Resource ${nextActive ? 'diaktifkan' : 'dinonaktifkan'}.` }); }
+    try { await api(`/resources/${resource.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: nextActive }) }); await refresh(); setNoticeSafe({ type: 'success', message: `Resource ${nextActive ? 'activated' : 'deactivated'}.` }); }
     catch (error) { setNoticeSafe({ type: 'error', message: error.message }); }
     finally { setBusy(false); }
   }
 
   if (booting) return <div className="boot-screen"><BrandLogo className="boot-brand-logo" /><span>Menyiapkan 30sFams Order Portal...</span></div>;
-  if (!user) return <><AuthScreen onAuthenticated={(account) => { setUser(account); setPage('dashboard'); }} setNotice={setNoticeSafe} /><Notice notice={notice} clear={() => setNotice(null)} /></>;
+  if (!user) return <><AuthScreen onAuthenticated={(account) => { setMember(account); setPage('dashboard'); }} setNotice={setNoticeSafe} /><Notice notice={notice} clear={() => setNotice(null)} /></>;
 
   return <div className="app-shell">
-    {mobileNav && <button className="mobile-backdrop" onClick={() => setMobileNav(false)} aria-label="Tutup menu" />}
+    {mobileNav && <button className="mobile-backdrop" onClick={() => setMobileNav(false)} aria-label="Close menu" />}
     <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
       <div className="sidebar-brand"><BrandLogo className="sidebar-brand-logo" /><span>30s<span className="brand-accent">FAMS</span></span><button className="icon-button mobile-close" onClick={() => setMobileNav(false)}><X size={18} /></button></div>
       <div className="workspace-switch"><div className="workspace-avatar"><Command size={17} /></div><div><strong>30sFams Supply</strong><span>Resource order workspace</span></div><ChevronDown size={15} /></div>
       <nav className="sidebar-nav">{[...new Set(navItems.map((item) => item.group))].map((group) => <div className="nav-group" key={group}><div className="nav-caption">{group}</div>{navItems.filter((item) => item.group === group).map((item) => <button key={item.key} className={`nav-link ${page === item.key ? 'active' : ''}`} onClick={() => { setPage(item.key); setMobileNav(false); }}><item.icon size={18} /><span>{item.label}</span>{item.key === 'admin-orders' && orders.filter((order) => order.status === 'PENDING').length > 0 && <em>{orders.filter((order) => order.status === 'PENDING').length}</em>}</button>)}</div>)}</nav>
-      <div className="sidebar-bottom"><div className="sidebar-user"><div className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</div><div className="sidebar-user-info"><strong>{user.username}</strong><span>{isAdmin ? 'Administrator' : 'Member'}</span></div><button className="icon-button" onClick={() => setShowPasswordModal(true)} title="Ganti password"><KeyRound size={17} /></button><button className="icon-button" onClick={signOut} title="Logout"><LogOut size={17} /></button></div></div>
+      <div className="sidebar-bottom"><div className="sidebar-user"><div className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</div><div className="sidebar-user-info"><strong>{user.username}</strong><span>{isSuper Admin ? 'Super Super Admin' : 'Member'}</span></div><button className="icon-button" onClick={() => setShowPasswordModal(true)} title="Change password"><KeyRound size={17} /></button><button className="icon-button" onClick={signOut} title="Sign out"><LogOut size={17} /></button></div></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button><div className="breadcrumb"><span>30sFams</span><span>/</span><strong>{pageTitle}</strong></div></div><div className="topbar-right"><div className="system-status"><span className="live-dot" /> System operational</div><NotificationCenter notifications={notifications} unreadCount={unreadCount} onReadAll={markAllNotificationsRead} onSelect={selectNotification} /><div className="topbar-divider" /><div className="topbar-profile"><div className="user-avatar small">{user.username.slice(0, 1).toUpperCase()}</div><div><strong>{user.username}</strong><span>{isAdmin ? 'Admin' : 'User'}</span></div></div></div></header>
+      <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button><div className="breadcrumb"><span>30sFams</span><span>/</span><strong>{pageTitle}</strong></div></div><div className="topbar-right"><div className="system-status"><span className="live-dot" /> System operational</div><NotificationCenter notifications={notifications} unreadCount={unreadCount} onReadAll={markAllNotificationsRead} onSelect={selectNotification} /><div className="topbar-divider" /><div className="topbar-profile"><div className="user-avatar small">{user.username.slice(0, 1).toUpperCase()}</div><div><strong>{user.username}</strong><span>{isSuper Admin ? 'Super Admin' : 'Member'}</span></div></div></div></header>
       <div className="content-area"><Notice notice={notice} clear={() => setNotice(null)} />
-        {pageLoadError?.key === currentPageKey ? <div className="panel loading-panel page-load-error"><strong>Halaman gagal dimuat</strong><p>{pageLoadError.message}</p><button type="button" className="button button-outline" onClick={retryCurrentPage}>Muat ulang halaman</button></div> : pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Memuat data halaman...</div> : <>
-        {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Memperbarui data...</div>}
-        {page === 'dashboard' && <Dashboard user={user} resources={isAdmin ? [] : resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
-        {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isAdmin} isAdminMode={isAdmin} />}
-        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Pesanan saya" description="Pantau status pesanan dari akun ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={isAdmin ? adminMyOrders : orders} isAdmin={false} onAction={isAdmin ? cancelOwnOrder : orderAction} onDetail={openOrderDetail} onReorder={reorderOrder} busy={busy} /></div></>}
-        {page === 'inventory' && isAdmin && <Inventory resources={inventoryResources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
-        {page === 'stash' && isAdmin && <StashPage resources={stashResources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
-        {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
-        {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
-        {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
-        {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="Semua pesanan" description="Tinjau permintaan, setujui reservasi stok, dan tandai Completed langsung setelah resource diserahkan. Reservasi tidak kedaluwarsa otomatis; admin mengelolanya secara manual." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Batalkan order aktif</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Arsipkan semua</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} pesanan aktif</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetail={openOrderDetail} busy={busy} /></div></>}
-        {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Arsip pesanan" description="Semua pesanan yang diarsipkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export arsip CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} arsip</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetail={openOrderDetail} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
-        {page === 'reports' && isAdmin && <Reports reports={reports} />}
-        {page === 'users' && isAdmin && <UsersPage users={users} onCreate={createUser} onToggle={toggleUser} onDelete={deleteUser} onApprove={approveRegistration} onRankChange={changeUserRank} onRoleChange={changeUserRole} currentUserId={user.id} busy={busy} />}
-        {page === 'finance' && isAdmin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
-        {page === 'notes' && isAdmin && <ManualNotesPage notes={manualNotes} onSave={saveManualNote} onDelete={deleteManualNote} busy={busy} />}
-        {page === 'activity' && isAdmin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
-        {((isAdmin && ['favorites'].includes(page)) || (!isAdmin && ['inventory','stash','stock-history','notes','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Halaman tidak tersedia" detail="Menu ini tidak termasuk dalam hak akses akun Anda." /></div>}
+        {pageLoadError?.key === currentPageKey ? <div className="panel loading-panel page-load-error"><strong>Page gagal dimuat</strong><p>{pageLoadError.message}</p><button type="button" className="button button-outline" onClick={retryCurrentPage}>Reload page</button></div> : pageLoading && !loadedPages[currentPageKey] ? <div className="panel loading-panel">Loading page data...</div> : <>
+        {pageLoading && loadedPages[currentPageKey] && <div className="page-refresh-indicator" role="status">Refreshing data...</div>}
+        {page === 'dashboard' && <Overview user={user} resources={isSuper Admin ? [] : resources} orders={orders} reports={reports} dashboardData={dashboardData} goTo={setPage} />}
+        {page === 'catalog' && <Catalog resources={resources} cart={cart} setCart={setCart} search={search} setSearch={setSearch} category={category} setCategory={setCategory} submitOrder={submitOrder} busy={busy} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} showFavorites={!isSuper Admin} isSuper AdminMode={isSuper Admin} />}
+        {page === 'my-orders' && <><SectionHeader eyebrow="ORDER HISTORY" title="Orders saya" description="Pantau status pesanan of  account ini, buka invoice, batalkan pesanan Pending, atau pesan ulang transaksi yang sudah selesai." /><div className="panel"><OrderTable orders={isSuper Admin ? adminMyOrders : orders} isSuper Admin={false} onAction={isSuper Admin ? cancelOwnOrder : orderAction} onDetails={openOrderDetails} onReorder={reorderOrder} busy={busy} /></div></>}
+        {page === 'inventory' && isSuper Admin && <Inventory resources={inventoryResources} onCreate={createResource} onStock={adjustStock} onEdit={editResource} onToggle={toggleResource} onImage={updateResourceImage} onRemoveImage={removeResourceImage} busy={busy} />}
+        {page === 'stash' && isSuper Admin && <StashPage resources={stashResources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
+        {page === 'stock-history' && isSuper Admin && <StockMovementPage movements={stockMovements} />}
+        {page === 'member-stats' && isSuper Admin && <MemberStatsPage data={memberStats} />}
+        {page === 'favorites' && !isSuper Admin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
+        {page === 'admin-orders' && isSuper Admin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="All pesanan" description="Review requests, approve stock reservations, and mark orders as Completed once resources have been handed over. Reservations do not expire automatically and are managed manually by admins." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Cancelkan order aktif</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Archivedkan semua</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} active orders</div></div>} /><div className="panel"><OrderTable orders={orders} isSuper Admin onAction={orderAction} onDetails={openOrderDetails} busy={busy} /></div></>}
+        {page === 'archived-orders' && isSuper Admin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Archived pesanan" description="All pesanan yang diarchivedkan. Data tetap tersedia untuk detail, invoice, laporan, dan audit." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export Archive CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} archived</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isSuper Admin readOnly isArchived onDetails={openOrderDetails} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
+        {page === 'reports' && isSuper Admin && <Reports reports={reports} />}
+        {page === 'users' && isSuper Admin && <MembersPage users={users} onCreate={createMember} onToggle={toggleMember} onDelete={deleteMember} onApprove={approveRegistration} onRankChange={changeMemberRank} onRoleChange={changeMemberRole} currentMemberId={user.id} busy={busy} />}
+        {page === 'finance' && isSuper Admin && <FinancePage finance={finance} cash={cash} onStartPeriod={startSpendingPeriod} onUpdatePeriod={updateSpendingPeriod} onResetPeriod={resetSpendingPeriod} onSetOpeningBalance={setCashOpeningBalance} onAddExpense={addCashExpense} onAddCashIncome={addCashIncome} onAdjustCash={adjustCash} busy={busy} />}
+        {page === 'notes' && isSuper Admin && <ManualNotesPage notes={manualNotes} onSave={saveManualNote} onDelete={deleteManualNote} busy={busy} />}
+        {page === 'activity' && isSuper Admin && <ActivityPage logs={logs} discordStatus={discordStatus} onTestDiscord={testDiscord} busy={busy} />}
+        {((isSuper Admin && ['favorites'].includes(page)) || (!isSuper Admin && ['inventory','stash','stock-history','notes','admin-orders','archived-orders','reports','finance','users','member-stats','activity'].includes(page))) && <div className="panel"><EmptyState icon={ShieldCheck} title="Page tidak tersedia" detail="This menu is not available for your account role." /></div>}
         </>}
       </div>
-      {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Memuat detail pesanan...</section></div>}
-      <OrderDetailModal order={selectedOrder} isAdmin={isAdmin} onClose={() => setSelectedOrder(null)} onPrint={printSelectedOrder} />
+      {detailLoading && <div className="order-detail-overlay"><section className="order-detail-modal loading-panel">Loading order details...</section></div>}
+      <OrderDetailsModal order={selectedOrder} isSuper Admin={isSuper Admin} onClose={() => setSelectedOrder(null)} onPrint={printSelectedOrder} />
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} onSubmit={changePassword} busy={busy} />}
       {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onSave={saveResourceEdits} busy={busy} />}
       <footer className="main-footer"><span>© {new Date().getFullYear()} 30sFams</span><span>30sFams Resource Orders <i /> Private workspace</span></footer>
