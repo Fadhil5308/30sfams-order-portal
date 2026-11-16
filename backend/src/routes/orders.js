@@ -46,7 +46,7 @@ async function reserveOrderItems(tx, items, orderId, userId, orderNumber) {
     });
     if (changed.count !== 1) {
       const current = await tx.resource.findUnique({ where: { id: item.resourceId }, select: { stockAvailable: true } });
-      throw new HttpError(409, 'Stok ' + item.resourceName + ' tidak mencukupi. Tersedia saat ini: ' + (current?.stockAvailable ?? 0) + '. Pesanan tidak dibuat.');
+      throw new HttpError(409, 'Stock ' + item.resourceName + ' is insufficient. Currently available: ' + (current?.stockAvailable ?? 0) + '. The order was not created.');
     }
     movements.push({
       resourceId: item.resourceId, userId, orderId, type: 'RESERVED', quantity: item.quantity,
@@ -65,19 +65,19 @@ async function releaseOrderReservation(tx, order, userId, note) {
   });
   if (!movements.length) {
     if (order.status === 'PENDING') return;
-    throw new HttpError(409, 'Cadangan stok ' + order.orderNumber + ' tidak ditemukan. Periksa riwayat stok sebelum melanjutkan.');
+    throw new HttpError(409, 'Stock reservation ' + order.orderNumber + ' was not found. Check stock history before continuing.');
   }
   const reservedByResource = new Map();
   for (const movement of movements) reservedByResource.set(movement.resourceId, (reservedByResource.get(movement.resourceId) || 0) + movement.quantity);
   for (const item of order.items) {
     if ((reservedByResource.get(item.resourceId) || 0) !== item.quantity) {
-      throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' untuk ' + order.orderNumber + ' tidak sesuai. Tidak ada perubahan yang disimpan.');
+      throw new HttpError(409, 'Stock reservation ' + item.resourceName + ' for ' + order.orderNumber + ' is inconsistent. No changes were saved.');
     }
     const changed = await tx.resource.updateMany({
       where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
       data: { stockReserved: { decrement: item.quantity }, stockAvailable: { increment: item.quantity } },
     });
-    if (changed.count !== 1) throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' tidak konsisten.');
+    if (changed.count !== 1) throw new HttpError(409, 'Stock reservation ' + item.resourceName + ' is inconsistent.');
     await tx.stockMovement.create({ data: {
       resourceId: item.resourceId, userId, orderId: order.id, type: 'RELEASED', quantity: item.quantity, note,
     } });
@@ -99,7 +99,7 @@ router.post('/', asyncHandler(async (req, res) => {
     const items = data.items.map((item) => {
       const resource = byId.get(item.resourceId);
       if (item.quantity > resource.stockAvailable) {
-        throw new HttpError(409, `Jumlah ${resource.name} melebihi stok tersedia saat ini (${resource.stockAvailable}).`);
+        throw new HttpError(409, `Quantity for ${resource.name} exceeds the currently available stock (${resource.stockAvailable}).`);
       }
       const unitPrice = new Prisma.Decimal(resource.unitPrice);
       const lineTotal = unitPrice.mul(item.quantity);
@@ -138,16 +138,16 @@ router.post('/', asyncHandler(async (req, res) => {
   try {
     await notifyAdmins(prisma, {
       type: 'ORDER_CREATED', title: 'Pesanan baru masuk',
-      message: `${req.user.username} membuat pesanan ${order.orderNumber}. Stok sudah dicadangkan; periksa dan tinjau permintaan ini.`,
+      message: `${req.user.username} membuat pesanan ${order.orderNumber}. Stock sudah dicadangkan; periksa dan tinjau permintaan ini.`,
       orderId: order.id,
     });
   } catch (error) {
-    console.error('Notifikasi admin untuk pesanan gagal disimpan:', error);
+    console.error('Notifikasi admin for pesanan gagal disimpan:', error);
   }
   try {
     await notifyUsers(prisma, [req.user.id], {
       type: 'ORDER_STATUS', title: 'Pesanan berhasil diterima',
-      message: `Pesanan ${order.orderNumber} sudah diterima dan stok telah dicadangkan sambil menunggu persetujuan admin.`,
+      message: `Order ${order.orderNumber} has been received and stock has been reserved pending administrator approval.`,
       orderId: order.id,
     });
   } catch (error) {
@@ -155,7 +155,7 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   void sendDiscordNotification({ title: 'Pesanan baru 30sFams', description: `Anggota **${req.user.username}** mengirim pesanan **${order.orderNumber}** berisi ${order.totalQuantity} unit dan menunggu persetujuan admin.` });
-  res.status(201).json({ order: serializeOrder(order), message: 'Pesanan terkirim. Stok berhasil diamankan dan menunggu persetujuan admin.' });
+  res.status(201).json({ order: serializeOrder(order), message: 'Pesanan terkirim. Stock berhasil diamankan dan menunggu persetujuan admin.' });
 }));
 
 router.get('/mine', asyncHandler(async (req, res) => {
@@ -180,13 +180,13 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     include: { items: true },
   });
   if (!previous) throw new HttpError(404, 'Order not found.');
-  if (previous.status !== 'COMPLETED') throw new HttpError(409, 'Pesan ulang hanya tersedia untuk pesanan yang sudah Completed.');
+  if (previous.status !== 'COMPLETED') throw new HttpError(409, 'Pesan ulang hanya tersedia for pesanan yang sudah Completed.');
   const newOrder = await prisma.$transaction(async (tx) => {
     const ids = previous.items.map((item) => item.resourceId);
     const resources = await tx.resource.findMany({ where: { id: { in: ids }, isActive: true } });
-    if (resources.length !== ids.length) throw new HttpError(409, 'Sebagian resource pada pesanan lama sudah tidak aktif. Hubungi admin.');
+    if (resources.length !== ids.length) throw new HttpError(409, 'Some resources from the previous order are no longer active. Contact an administrator.');
     if (resources.some((resource) => resource.category === 'OTHER')) {
-      throw new HttpError(409, 'Item kategori Other hanya tersedia di Stash dan tidak dapat dipesan ulang.');
+      throw new HttpError(409, 'Items in the Other category are only available in Stash and cannot be reordered.');
     }
     const byId = new Map(resources.map((resource) => [resource.id, resource]));
     let totalAmount = new Prisma.Decimal(0);
@@ -194,7 +194,7 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     const items = previous.items.map((oldItem) => {
       const resource = byId.get(oldItem.resourceId);
       if (oldItem.quantity > resource.stockAvailable) {
-        throw new HttpError(409, `Stok ${resource.name} tidak cukup untuk pesan ulang. Tersedia: ${resource.stockAvailable}.`);
+        throw new HttpError(409, `Stock ${resource.name} tidak cukup for pesan ulang. Tersedia: ${resource.stockAvailable}.`);
       }
       const unitPrice = new Prisma.Decimal(resource.unitPrice);
       const lineTotal = unitPrice.mul(oldItem.quantity);
@@ -216,15 +216,15 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     await reserveOrderItems(tx, items, created.id, req.user.id, orderNumber);
     await tx.orderStatusHistory.create({ data: {
       orderId: created.id, changedById: req.user.id, fromStatus: null, toStatus: 'PENDING',
-      note: `Pesanan ulang dibuat berdasarkan ${previous.orderNumber}. Stok langsung dicadangkan.`,
+      note: `Pesanan ulang dibuat berdasarkan ${previous.orderNumber}. Stock langsung dicadangkan.`,
     } });
     await notifyAdmins(tx, {
       type: 'ORDER_CREATED', title: 'Pesanan ulang masuk',
-      message: `${req.user.username} membuat pesanan ulang ${created.orderNumber} berdasarkan ${previous.orderNumber}. Stok sudah dicadangkan.`, orderId: created.id,
+      message: `${req.user.username} membuat pesanan ulang ${created.orderNumber} berdasarkan ${previous.orderNumber}. Stock sudah dicadangkan.`, orderId: created.id,
     });
     await notifyUsers(tx, [req.user.id], {
       type: 'ORDER_STATUS', title: 'Pesanan ulang berhasil dikirim',
-      message: `Pesanan ${created.orderNumber} dibuat berdasarkan ${previous.orderNumber}. Stok sudah dicadangkan dan menunggu persetujuan admin.`, orderId: created.id,
+      message: `Pesanan ${created.orderNumber} dibuat berdasarkan ${previous.orderNumber}. Stock sudah dicadangkan dan menunggu persetujuan admin.`, orderId: created.id,
     });
     await tx.activityLog.create({ data: {
       userId: req.user.id, action: 'ORDER_REORDERED',
@@ -233,14 +233,14 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     return tx.order.findUnique({ where: { id: created.id }, include: orderInclude });
   }, { isolationLevel: 'Serializable' });
   void sendDiscordNotification({ title: 'Pesanan ulang 30sFams', description: `Anggota **${req.user.username}** mengirim pesanan ulang **${newOrder.orderNumber}** berdasarkan **${previous.orderNumber}**.` });
-  res.status(201).json({ order: serializeOrder(newOrder), message: `Pesanan ulang ${newOrder.orderNumber} berhasil dikirim dan stok diamankan. Harga menggunakan harga saat ini.` });
+  res.status(201).json({ order: serializeOrder(newOrder), message: `Reorder ${newOrder.orderNumber} submitted successfully and stock reserved. Current prices were applied.` });
 }));
 
 router.post('/:id/cancel', asyncHandler(async (req, res) => {
   const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { items: true } });
     if (!order) throw new HttpError(404, 'Order not found.');
-    if (order.status !== 'PENDING') throw new HttpError(409, 'User hanya dapat membatalkan pesanan yang masih Pending. Hubungi admin untuk pesanan yang sudah disetujui.');
+    if (order.status !== 'PENDING') throw new HttpError(409, 'User hanya dapat membatalkan pesanan yang masih Pending. Hubungi admin for pesanan yang sudah disetujui.');
     await releaseOrderReservation(tx, order, req.user.id, 'Cadangan dikembalikan karena ' + order.orderNumber + ' dibatalkan oleh pemesan.');
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'CANCELLED',
