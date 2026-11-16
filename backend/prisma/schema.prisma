@@ -129,6 +129,7 @@ model Resource {
   unitPrice       Decimal           @default(0) @db.Decimal(14, 2)
   stockAvailable  Int               @default(0)
   stockReserved   Int               @default(0)
+  minStock        Int               @default(0)
   isActive        Boolean           @default(true)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -137,6 +138,7 @@ model Resource {
   favorites       FavoriteResource[]
 
   @@index([category, isActive])
+  @@index([isActive, minStock])
   @@index([name])
 }
 
