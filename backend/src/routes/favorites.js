@@ -21,7 +21,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.post('/:resourceId', asyncHandler(async (req, res) => {
   const resourceId = z.string().min(1).max(100).parse(req.params.resourceId);
   const resource = await prisma.resource.findFirst({ where: { id: resourceId, isActive: true } });
-  if (!resource || resource.category === 'OTHER') throw new HttpError(404, 'Resource tidak ditemukan atau tidak tersedia untuk katalog.');
+  if (!resource || resource.category === 'OTHER') throw new HttpError(404, 'Resource not found or unavailable in the catalog.');
   const favorite = await prisma.favoriteResource.upsert({
     where: { userId_resourceId: { userId: req.user.id, resourceId } },
     create: { userId: req.user.id, resourceId },
