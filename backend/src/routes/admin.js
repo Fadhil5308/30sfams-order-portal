@@ -123,7 +123,7 @@ async function ensureOrderReservation(tx, order, userId) {
     for (const movement of movements) reservedByResource.set(movement.resourceId, (reservedByResource.get(movement.resourceId) || 0) + movement.quantity);
     for (const item of order.items) {
       if ((reservedByResource.get(item.resourceId) || 0) !== item.quantity) {
-        throw new HttpError(409, 'Cadangan stok untuk ' + item.resourceName + ' tidak sesuai. Pesanan belum disetujui.');
+        throw new HttpError(409, 'Stock reservation for ' + item.resourceName + ' is inconsistent. The order was not approved.');
       }
     }
     return false;
@@ -136,11 +136,11 @@ async function ensureOrderReservation(tx, order, userId) {
     });
     if (changed.count !== 1) {
       const current = await tx.resource.findUnique({ where: { id: item.resourceId }, select: { stockAvailable: true } });
-      throw new HttpError(409, 'Stok ' + item.resourceName + ' tidak mencukupi. Tersedia saat ini: ' + (current?.stockAvailable ?? 0) + '. Pesanan belum disetujui.');
+      throw new HttpError(409, 'Stock ' + item.resourceName + ' is insufficient. Currently available: ' + (current?.stockAvailable ?? 0) + '. The order was not approved.');
     }
     newMovements.push({
       resourceId: item.resourceId, userId, orderId: order.id, type: 'RESERVED', quantity: item.quantity,
-      note: 'Cadangan stok untuk pesanan lama ' + order.orderNumber + ' saat disetujui admin.',
+      note: 'Stock reservation for pesanan lama ' + order.orderNumber + ' saat disetujui admin.',
     });
   }
   if (newMovements.length) await tx.stockMovement.createMany({ data: newMovements });
@@ -156,19 +156,19 @@ async function releaseOrderReservation(tx, order, userId, note) {
   });
   if (!movements.length) {
     if (order.status === 'PENDING') return false;
-    throw new HttpError(409, 'Cadangan stok ' + order.orderNumber + ' tidak ditemukan. Periksa riwayat stok sebelum melanjutkan.');
+    throw new HttpError(409, 'Stock reservation ' + order.orderNumber + ' was not found. Check stock history before continuing.');
   }
   const reservedByResource = new Map();
   for (const movement of movements) reservedByResource.set(movement.resourceId, (reservedByResource.get(movement.resourceId) || 0) + movement.quantity);
   for (const item of order.items) {
     if ((reservedByResource.get(item.resourceId) || 0) !== item.quantity) {
-      throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' untuk ' + order.orderNumber + ' tidak sesuai. Tidak ada perubahan yang disimpan.');
+      throw new HttpError(409, 'Stock reservation ' + item.resourceName + ' for ' + order.orderNumber + ' is inconsistent. No changes were saved.');
     }
     const changed = await tx.resource.updateMany({
       where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
       data: { stockReserved: { decrement: item.quantity }, stockAvailable: { increment: item.quantity } },
     });
-    if (changed.count !== 1) throw new HttpError(409, 'Cadangan stok ' + item.resourceName + ' tidak konsisten.');
+    if (changed.count !== 1) throw new HttpError(409, 'Stock reservation ' + item.resourceName + ' is inconsistent.');
     await tx.stockMovement.create({ data: {
       resourceId: item.resourceId, userId, orderId: order.id, type: 'RELEASED', quantity: item.quantity, note,
     } });
@@ -213,7 +213,7 @@ router.post('/orders/archive-all', asyncHandler(async (req, res) => {
     } });
     return { archivedCount: changed.count, archivedAt };
   }, { isolationLevel: 'Serializable' });
-  res.json({ ...result, message: `${result.archivedCount} pesanan dipindahkan ke arsip. Riwayat dan stok tidak diubah.` });
+  res.json({ ...result, message: `${result.archivedCount} orders moved to the archive. History and stock were not changed.` });
 }));
 
 // Pulihkan satu pesanan dari arsip ke daftar operasional tanpa mengubah status atau stok.
@@ -233,7 +233,7 @@ router.post('/orders/:id/restore', asyncHandler(async (req, res) => {
     } });
     return tx.order.findUnique({ where: { id: order.id }, include: orderInclude });
   }, { isolationLevel: 'Serializable' });
-  res.json({ order: serializeOrder(updated), message: `Pesanan ${updated.orderNumber} berhasil dipulihkan ke daftar aktif. Status dan stok tidak diubah.` });
+  res.json({ order: serializeOrder(updated), message: `Pesanan ${updated.orderNumber} was restored to the active list. Status and stock were not changed.` });
 }));
 
 // Pembatalan massal adalah aksi terpisah dari arsip. Reservasi pada pesanan Approved dikembalikan.
@@ -259,14 +259,14 @@ router.post('/orders/cancel-active', asyncHandler(async (req, res) => {
         where: { id: order.id, archivedAt: null, status: order.status },
         data: { status: 'CANCELLED', adminNotes: order.adminNotes ? `${order.adminNotes}\n\n[Bulk cancel] ${note}` : note },
       });
-      if (changedOrder.count !== 1) throw new HttpError(409, `Status ${order.orderNumber} berubah selama proses. Seluruh pembatalan dibatalkan.`);
+      if (changedOrder.count !== 1) throw new HttpError(409, `Status ${order.orderNumber} changed during processing. All cancellations were rolled back.`);
       await tx.orderStatusHistory.create({ data: {
         orderId: order.id, changedById: req.user.id, fromStatus: order.status, toStatus: 'CANCELLED',
         note: `Pembatalan massal oleh admin. ${note}`.trim(),
       } });
       await notifyOrderOwner(tx, order, {
         type: 'ORDER_STATUS', title: 'Pesanan dibatalkan admin',
-        message: `Pesanan ${order.orderNumber} dibatalkan oleh admin. ${note}`.trim(),
+        message: `Pesanan ${order.orderNumber} cancelled by an administrator. ${note}`.trim(),
       });
     }
     await tx.activityLog.create({ data: {
@@ -276,7 +276,7 @@ router.post('/orders/cancel-active', asyncHandler(async (req, res) => {
     return { pendingCancelled, approvedCancelled, totalCancelled: pendingCancelled + approvedCancelled };
   }, { isolationLevel: 'Serializable', timeout: 30000 });
   void sendDiscordNotification({ title: 'Pembatalan massal pesanan', description: `Admin membatalkan ${result.totalCancelled} pesanan aktif (${result.pendingCancelled} Pending, ${result.approvedCancelled} Approved).`, color: 0xD97706 });
-  res.json({ ...result, message: `${result.totalCancelled} pesanan aktif dibatalkan. Cadangan stok dari pesanan Pending dan Approved yang sudah menggunakan reservasi telah dikembalikan.` });
+  res.json({ ...result, message: `${result.totalCancelled} pesanan aktif dibatalkan. Stock reservation dari pesanan Pending dan Approved yang sudah menggunakan reservasi telah dikembalikan.` });
 }));
 
 router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
@@ -289,19 +289,19 @@ router.post('/orders/:id/approve', asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_APPROVED', detail: `Menyetujui pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'APPROVED',
-      note: 'Pesanan disetujui admin. Stok yang telah dicadangkan tetap diamankan.',
+      note: 'Pesanan disetujui admin. Stock yang telah dicadangkan tetap diamankan.',
     } });
     return tx.order.update({ where: { id: order.id }, data: { status: 'APPROVED', approvedAt: new Date() }, include: orderInclude });
   }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 15000 });
   try {
     await notifyOrderOwner(prisma, updated, {
       type: 'ORDER_STATUS', title: 'Pesanan disetujui',
-      message: `Pesanan ${updated.orderNumber} disetujui. Stok tetap diamankan dan menunggu penyerahan resource.`,
+      message: `Pesanan ${updated.orderNumber} disetujui. Stock tetap diamankan dan menunggu penyerahan resource.`,
     });
   } catch (error) {
     console.error('Notifikasi persetujuan pesanan gagal disimpan:', error);
   }
-  void sendDiscordNotification({ title: 'Pesanan disetujui', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** disetujui. Stok telah dicadangkan.` });
+  void sendDiscordNotification({ title: 'Pesanan disetujui', description: `Pesanan **${updated.orderNumber}** milik **${updated.user?.username || 'anggota'}** disetujui. Stock telah dicadangkan.` });
   res.json({ order: serializeOrder(updated), message: 'Order approved. Stock remains reserved and will not be deducted twice.' });
 }));
 
@@ -315,19 +315,19 @@ router.post('/orders/:id/reject', asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_REJECTED', detail: `Menolak pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
       orderId: order.id, changedById: req.user.id, fromStatus: 'PENDING', toStatus: 'REJECTED',
-      note: data.adminNotes || 'Pesanan ditolak oleh admin.',
+      note: data.adminNotes || 'Pesanan was rejected by an administrator.',
     } });
     return tx.order.update({ where: { id: order.id }, data: { status: 'REJECTED', adminNotes: data.adminNotes }, include: orderInclude });
   }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 15000 });
   try {
     await notifyOrderOwner(prisma, updated, {
       type: 'ORDER_STATUS', title: 'Pesanan ditolak',
-      message: `Pesanan ${updated.orderNumber} ditolak oleh admin.${data.adminNotes ? ` Catatan: ${data.adminNotes}` : ''}`,
+      message: `Pesanan ${updated.orderNumber} was rejected by an administrator.${data.adminNotes ? ` Catatan: ${data.adminNotes}` : ''}`,
     });
   } catch (error) {
     console.error('Notifikasi penolakan pesanan gagal disimpan:', error);
   }
-  void sendDiscordNotification({ title: 'Pesanan ditolak', description: `Pesanan **${updated.orderNumber}** ditolak oleh admin.` , color: 0xD97706 });
+  void sendDiscordNotification({ title: 'Pesanan ditolak', description: `Pesanan **${updated.orderNumber}** was rejected by an administrator.` , color: 0xD97706 });
   res.json({ order: serializeOrder(updated) });
 }));
 
@@ -350,10 +350,10 @@ router.post('/orders/:id/complete', asyncHandler(async (req, res) => {
         where: { id: item.resourceId, stockReserved: { gte: item.quantity } },
         data: { stockReserved: { decrement: item.quantity } },
       });
-      if (changed.count !== 1) throw new HttpError(409, `Cadangan stok ${item.resourceName} tidak konsisten. Periksa stock movement.`);
+      if (changed.count !== 1) throw new HttpError(409, `Stock reservation ${item.resourceName} is inconsistent. Periksa stock movement.`);
       completedMovements.push({
         resourceId: item.resourceId, userId: req.user.id, orderId: order.id,
-        type: 'COMPLETED', quantity: item.quantity, note: `Resource dikeluarkan untuk ${order.orderNumber}`,
+        type: 'COMPLETED', quantity: item.quantity, note: `Resource dikeluarkan for ${order.orderNumber}`,
       });
     }
     if (completedMovements.length) await tx.stockMovement.createMany({ data: completedMovements });
@@ -376,7 +376,7 @@ router.post('/orders/:id/complete', asyncHandler(async (req, res) => {
   try {
     await notifyOrderOwner(prisma, updated, {
       type: 'ORDER_STATUS', title: 'Resource telah diserahkan',
-      message: `Pesanan ${updated.orderNumber} telah diserahkan dan ditandai selesai oleh admin.${data.handoverNote ? ` Catatan: ${data.handoverNote}` : ''}`,
+      message: `Pesanan ${updated.orderNumber} was handed over and marked as completed by an administrator.${data.handoverNote ? ` Catatan: ${data.handoverNote}` : ''}`,
     });
   } catch (error) {
     console.error('Notifikasi penyelesaian pesanan gagal disimpan:', error);
@@ -390,7 +390,7 @@ router.post('/orders/:id/cancel', asyncHandler(async (req, res) => {
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: req.params.id }, include: { items: true } });
     if (!order) throw new HttpError(404, 'Order not found.');
-    if (!['PENDING', 'APPROVED'].includes(order.status)) throw new HttpError(409, 'Pesanan ini tidak dapat dibatalkan pada status sekarang.');
+    if (!['PENDING', 'APPROVED'].includes(order.status)) throw new HttpError(409, 'Pesanan ini cannot be cancelled in its current status.');
     await releaseOrderReservation(tx, order, req.user.id, `Cadangan dilepas karena ${order.orderNumber} dibatalkan oleh admin.`);
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'ORDER_CANCELLED', detail: `Membatalkan pesanan ${order.orderNumber}` } });
     await tx.orderStatusHistory.create({ data: {
@@ -488,14 +488,14 @@ router.post('/users', asyncHandler(async (req, res) => {
     });
     await tx.notification.create({ data: {
       userId: created.id, type: 'ACCOUNT_CREATED', title: 'Akun 30sFams dibuat',
-      message: 'Akun kamu sudah dibuat oleh admin 30sFams. Gunakan username/email dan password sementara yang diberikan admin untuk login.',
+      message: 'Akun kamu sudah dibuat oleh admin 30sFams. Gunakan username/email dan password sementara yang diberikan admin for login.',
     } });
     await tx.activityLog.create({ data: {
       userId: req.user.id, action: 'USER_CREATED', detail: `Membuat akun user ${created.username} (${created.email}).`,
     } });
     return created;
   });
-  res.status(201).json({ user, message: `Akun ${user.username} berhasil dibuat. Sampaikan kredensial awal secara pribadi kepada pemilik akun.` });
+  res.status(201).json({ user, message: `Akun ${user.username} was created. Share the initial credentials privately with the account owner.` });
 }));
 
 router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
@@ -515,7 +515,7 @@ router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
       title: data.status === 'APPROVED' ? 'Akun 30sFams disetujui' : 'Pendaftaran belum disetujui',
       message: data.status === 'APPROVED'
         ? 'Pendaftaran kamu telah disetujui. Silakan login ke portal 30sFams.'
-        : 'Pendaftaran kamu belum disetujui. Hubungi admin 30sFams untuk informasi lebih lanjut.',
+        : 'Pendaftaran kamu belum disetujui. Hubungi admin 30sFams for informasi lebih lanjut.',
     } });
     await tx.activityLog.create({ data: {
       userId: req.user.id,
@@ -524,7 +524,7 @@ router.patch('/users/:id/approval', asyncHandler(async (req, res) => {
     } });
     return updated;
   });
-  res.json({ user, message: data.status === 'APPROVED' ? `Akun ${user.username} sudah disetujui dan dapat login.` : `Pendaftaran ${user.username} ditolak.` });
+  res.json({ user, message: data.status === 'APPROVED' ? `Akun ${user.username} has been approved and can now sign in.` : `Pendaftaran ${user.username} was rejected.` });
 }));
 
 router.get('/users', asyncHandler(async (_req, res) => {
@@ -576,7 +576,7 @@ router.patch('/users/:id/role', asyncHandler(async (req, res) => {
 
   res.json({
     user,
-    message: 'Role ' + user.username + ' berhasil diubah menjadi ' + (user.role === 'ADMIN' ? 'Super Admin' : 'Member') + '.',
+    message: 'Role for ' + user.username + ' was changed to ' + (user.role === 'ADMIN' ? 'Super Admin' : 'Member') + '.',
   });
 }));
 
@@ -590,7 +590,7 @@ router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'USER_RANK_UPDATED', detail: 'Mengubah rank ' + target.username + ' dari ' + target.rank + ' menjadi ' + data.rank + '.' } });
     return updated;
   });
-  res.json({ user, message: 'Rank ' + user.username + ' berhasil diperbarui.' });
+  res.json({ user, message: 'Rank for ' + user.username + ' was updated. });
 }));
 
 router.patch('/users/:id/status', asyncHandler(async (req, res) => {
@@ -599,7 +599,7 @@ router.patch('/users/:id/status', asyncHandler(async (req, res) => {
   if (!target) throw new HttpError(404, 'User not found.');
   if (target.role !== 'USER') throw new HttpError(403, 'Administrator account status cannot be changed from this menu.');
   if (target.registrationStatus !== 'APPROVED') throw new HttpError(409, 'Registration must be approved before changing the account status.');
-  if (target.isActive === data.isActive) return res.json({ user: target, message: 'Status akun tidak berubah.' });
+  if (target.isActive === data.isActive) return res.json({ user: target, message: 'Account status was not changed.' });
   if (!data.isActive) {
     const openOrders = await prisma.order.count({ where: { userId: target.id, status: { in: ['PENDING', 'APPROVED'] } } });
     if (openOrders > 0) throw new HttpError(409, `Akun belum dapat dinonaktifkan karena masih memiliki ${openOrders} pesanan Pending/Approved. Selesaikan atau batalkan pesanan terlebih dahulu agar reservasi stok tidak tertahan.`);
@@ -620,14 +620,14 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     where: { id: req.params.id, deletedAt: null },
     select: { id: true, username: true, role: true },
   });
-  if (!target) throw new HttpError(404, 'Member tidak ditemukan atau sudah dihapus.');
-  if (target.role !== 'USER') throw new HttpError(403, 'Akun Super Admin tidak dapat dihapus dari menu Member.');
+  if (!target) throw new HttpError(404, 'Member not found or already deleted.');
+  if (target.role !== 'USER') throw new HttpError(403, 'Super Admin accounts cannot be deleted from the Members menu.');
 
   const openOrders = await prisma.order.count({
     where: { userId: target.id, status: { in: ['PENDING', 'APPROVED'] } },
   });
   if (openOrders > 0) {
-    throw new HttpError(409, 'Member belum dapat dihapus karena masih memiliki ' + openOrders + ' pesanan Pending/Approved. Selesaikan atau batalkan pesanan terlebih dahulu agar stok tidak tertahan.');
+    throw new HttpError(409, 'Member cannot be deleted because they still have ' + openOrders + ' Pending/Approved orders. Complete or cancel these orders first to release reserved stock.');
   }
 
   await prisma.$transaction(async (tx) => {
