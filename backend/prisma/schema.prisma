@@ -96,10 +96,26 @@ model User {
   spendingPeriods SpendingPeriod[] @relation("SpendingPeriodCreatedBy")
   cashEntries GangCashEntry[] @relation("GangCashCreatedBy")
   favorites FavoriteResource[]
+  manualNotes ManualNote[]
 
   @@index([role])
   @@index([registrationStatus, isActive])
   @@index([deletedAt])
+}
+
+model ManualNote {
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(120)
+  category    String   @default("UMUM") @db.VarChar(24)
+  content     String   @db.Text
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([category, createdAt])
+  @@index([createdById])
 }
 
 model Resource {
