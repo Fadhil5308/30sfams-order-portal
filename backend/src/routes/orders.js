@@ -26,7 +26,7 @@ const createOrderSchema = z.object({
   items: z.array(z.object({ resourceId: z.string().min(1), quantity: z.coerce.number().int().min(1).max(100_000) })).min(1).max(50),
   notes: z.string().trim().max(500).optional().default(''),
 }).refine((data) => new Set(data.items.map((item) => item.resourceId)).size === data.items.length, {
-  message: 'Resource yang sama tidak boleh dimasukkan dua kali.', path: ['items'],
+  message: 'The same resource cannot be added more than once.', path: ['items'],
 });
 
 function makeOrderNumber() {
@@ -89,9 +89,9 @@ router.post('/', asyncHandler(async (req, res) => {
   const order = await prisma.$transaction(async (tx) => {
     const ids = data.items.map((item) => item.resourceId);
     const resources = await tx.resource.findMany({ where: { id: { in: ids }, isActive: true } });
-    if (resources.length !== ids.length) throw new HttpError(400, 'Ada resource yang tidak ditemukan atau sedang tidak aktif.');
+    if (resources.length !== ids.length) throw new HttpError(400, 'One or more resources were not found or are inactive.');
     if (resources.some((resource) => resource.category === 'OTHER')) {
-      throw new HttpError(400, 'Item kategori Other hanya tersedia di Stash dan tidak dapat dipesan.');
+      throw new HttpError(400, 'Items in the Other category are only available in Stash and cannot be ordered.');
     }
     const byId = new Map(resources.map((resource) => [resource.id, resource]));
     let totalAmount = new Prisma.Decimal(0);
@@ -170,7 +170,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
     where: { id: req.params.id, userId: req.user.id },
     include: orderInclude,
   });
-  if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+  if (!order) throw new HttpError(404, 'Order not found.');
   res.json({ order: serializeOrder(order) });
 }));
 
@@ -179,7 +179,7 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
     where: { id: req.params.id, userId: req.user.id },
     include: { items: true },
   });
-  if (!previous) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+  if (!previous) throw new HttpError(404, 'Order not found.');
   if (previous.status !== 'COMPLETED') throw new HttpError(409, 'Pesan ulang hanya tersedia untuk pesanan yang sudah Completed.');
   const newOrder = await prisma.$transaction(async (tx) => {
     const ids = previous.items.map((item) => item.resourceId);
@@ -239,7 +239,7 @@ router.post('/:id/reorder', asyncHandler(async (req, res) => {
 router.post('/:id/cancel', asyncHandler(async (req, res) => {
   const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { items: true } });
-    if (!order) throw new HttpError(404, 'Pesanan tidak ditemukan.');
+    if (!order) throw new HttpError(404, 'Order not found.');
     if (order.status !== 'PENDING') throw new HttpError(409, 'User hanya dapat membatalkan pesanan yang masih Pending. Hubungi admin untuk pesanan yang sudah disetujui.');
     await releaseOrderReservation(tx, order, req.user.id, 'Cadangan dikembalikan karena ' + order.orderNumber + ' dibatalkan oleh pemesan.');
     await tx.orderStatusHistory.create({ data: {
