@@ -42,7 +42,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   const username = data.username;
   const email = data.email.toLowerCase();
   const duplicate = await prisma.user.findFirst({ where: { OR: [{ username }, { email }] }, select: { id: true } });
-  if (duplicate) throw new HttpError(409, 'Username atau email sudah digunakan.');
+  if (duplicate) throw new HttpError(409, 'Username or email is already in use.');
   const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
@@ -72,7 +72,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   const user = await prisma.user.findFirst({
     where: { deletedAt: null, OR: [{ email: identifier.toLowerCase() }, { username: identifier }] },
   });
-  if (!user || !(await bcrypt.compare(data.password, user.passwordHash))) throw new HttpError(401, 'Username/email atau password salah.');
+  if (!user || !(await bcrypt.compare(data.password, user.passwordHash))) throw new HttpError(401, 'Incorrect username/email or password.');
   if (user.registrationStatus === 'PENDING') throw new HttpError(403, 'Pendaftaran kamu masih menunggu persetujuan admin 30sFams.');
   if (user.registrationStatus === 'REJECTED') throw new HttpError(403, 'Pendaftaran akun belum disetujui. Hubungi admin 30sFams untuk informasi lebih lanjut.');
   if (!user.isActive) throw new HttpError(403, 'Akun kamu sedang dinonaktifkan. Hubungi admin 30sFams.');
@@ -89,20 +89,20 @@ router.post('/change-password', requireAuth, asyncHandler(async (req, res) => {
   const account = await prisma.user.findUnique({ where: { id: req.user.id }, select: { passwordHash: true, sessionVersion: true } });
   if (!account) throw new HttpError(404, 'Akun tidak ditemukan.');
   const currentMatches = await bcrypt.compare(data.currentPassword, account.passwordHash);
-  if (!currentMatches) throw new HttpError(400, 'Password saat ini tidak sesuai.');
+  if (!currentMatches) throw new HttpError(400, 'Current password is incorrect.');
   if (await bcrypt.compare(data.newPassword, account.passwordHash)) throw new HttpError(400, 'Password baru harus berbeda dari password saat ini.');
   const passwordHash = await bcrypt.hash(data.newPassword, 12);
   const updated = await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash, sessionVersion: { increment: 1 } }, select: { id: true, sessionVersion: true } });
   await prisma.activityLog.create({ data: { userId: req.user.id, action: 'PASSWORD_CHANGED', detail: `Pengguna ${req.user.username} mengganti password akun. Sesi lama dicabut.` } });
   setSession(res, updated);
-  res.json({ message: 'Password berhasil diubah. Sesi pada perangkat lain telah dicabut.' });
+  res.json({ message: 'Password changed successfully. Sessions on other devices have been revoked.' });
 }));
 
 router.post('/logout', (_req, res) => {
   const options = sessionCookieOptions();
   delete options.maxAge;
   res.clearCookie('fivem_session', options);
-  res.json({ message: 'Berhasil logout.' });
+  res.json({ message: 'Signed out successfully.' });
 });
 
 router.get('/me', requireAuth, (req, res) => res.json({ user: req.user }));
