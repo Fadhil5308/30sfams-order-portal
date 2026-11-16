@@ -10,17 +10,17 @@ router.use(requireAuth, requireAdmin);
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 function parseJakartaStart(value) {
-  if (!datePattern.test(value)) throw new HttpError(400, 'Tanggal harus menggunakan format YYYY-MM-DD.');
+  if (!datePattern.test(value)) throw new HttpError(400, 'Date must use the YYYY-MM-DD format.');
   const [year, month, day] = value.split('-').map(Number);
   const check = new Date(Date.UTC(year, month - 1, day));
-  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) throw new HttpError(400, 'Tanggal tidak valid.');
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) throw new HttpError(400, 'Invalid date.');
   return new Date(`${value}T00:00:00.000+07:00`);
 }
 function parseJakartaEnd(value) {
-  if (!datePattern.test(value)) throw new HttpError(400, 'Tanggal harus menggunakan format YYYY-MM-DD.');
+  if (!datePattern.test(value)) throw new HttpError(400, 'Date must use the YYYY-MM-DD format.');
   const [year, month, day] = value.split('-').map(Number);
   const check = new Date(Date.UTC(year, month - 1, day));
-  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) throw new HttpError(400, 'Tanggal tidak valid.');
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) throw new HttpError(400, 'Invalid date.');
   return new Date(`${value}T23:59:59.999+07:00`);
 }
 function asNumber(value) { return Number(value || 0); }
@@ -132,7 +132,7 @@ router.post('/spending-periods', asyncHandler(async (req, res) => {
   const data = periodSchema.parse(req.body ?? {});
   const startAt = parseJakartaStart(data.startDate);
   const endAt = data.endDate ? parseJakartaEnd(data.endDate) : null;
-  if (endAt && endAt < startAt) throw new HttpError(400, 'Tanggal akhir tidak boleh sebelum tanggal mulai.');
+  if (endAt && endAt < startAt) throw new HttpError(400, 'End date cannot be earlier than the start date.');
   const period = await prisma.$transaction(async (tx) => {
     const current = await tx.spendingPeriod.findFirst({ where: { isCurrent: true } });
     if (current) throw new HttpError(409, 'Periode aktif sudah ada. Ubah rentangnya atau gunakan Reset Periode untuk membuat periode baru.');
@@ -151,10 +151,10 @@ router.post('/spending-periods', asyncHandler(async (req, res) => {
 router.patch('/spending-periods/current', asyncHandler(async (req, res) => {
   const data = periodSchema.partial().parse(req.body ?? {});
   const current = await prisma.spendingPeriod.findFirst({ where: { isCurrent: true } });
-  if (!current) throw new HttpError(404, 'Belum ada periode aktif. Buat periode pertama terlebih dahulu.');
+  if (!current) throw new HttpError(404, 'There is no active period yet. Create the first period to continue.');
   const startAt = data.startDate ? parseJakartaStart(data.startDate) : current.startAt;
   const endAt = data.endDate === undefined ? current.endAt : (data.endDate ? parseJakartaEnd(data.endDate) : null);
-  if (endAt && endAt < startAt) throw new HttpError(400, 'Tanggal akhir tidak boleh sebelum tanggal mulai.');
+  if (endAt && endAt < startAt) throw new HttpError(400, 'End date cannot be earlier than the start date.');
   const period = await prisma.$transaction(async (tx) => {
     const updated = await tx.spendingPeriod.update({
       where: { id: current.id },
@@ -228,7 +228,7 @@ router.post('/cash/opening-balance', asyncHandler(async (req, res) => {
   }).parse(req.body ?? {});
   const entry = await prisma.$transaction(async (tx) => {
     const existingCount = await tx.gangCashEntry.count();
-    if (existingCount > 0) throw new HttpError(409, 'Saldo awal sudah pernah dicatat. Gunakan Tambah saldo atau Koreksi saldo untuk perubahan berikutnya.');
+    if (existingCount > 0) throw new HttpError(409, 'The opening balance has already been recorded. Use Add Funds or Adjust Balance for subsequent changes.');
     const created = await tx.gangCashEntry.create({
       data: { type: 'OPENING_BALANCE', amount: data.amount, category: 'Saldo awal', description: data.description, createdById: req.user.id },
     });
@@ -246,7 +246,7 @@ router.post('/cash/income', asyncHandler(async (req, res) => {
   }).parse(req.body ?? {});
   const entry = await prisma.$transaction(async (tx) => {
     const snapshot = await cashSnapshot(tx);
-    if (!snapshot.initialized) throw new HttpError(409, 'Tetapkan saldo awal kas terlebih dahulu.');
+    if (!snapshot.initialized) throw new HttpError(409, 'Set the initial gang fund balance first.');
     const created = await tx.gangCashEntry.create({
       data: { type: 'ADJUSTMENT_IN', amount: data.amount, category: data.category, description: data.description, createdById: req.user.id },
     });
@@ -264,7 +264,7 @@ router.post('/cash/expenses', asyncHandler(async (req, res) => {
   }).parse(req.body ?? {});
   const result = await prisma.$transaction(async (tx) => {
     const snapshot = await cashSnapshot(tx);
-    if (!snapshot.initialized) throw new HttpError(409, 'Tetapkan saldo awal kas terlebih dahulu.');
+    if (!snapshot.initialized) throw new HttpError(409, 'Set the initial gang fund balance first.');
     const amountCents = toCents(data.amount);
     if (amountCents > snapshot.balance) throw new HttpError(409, `Saldo kas tidak mencukupi. Saldo saat ini $${fromCents(snapshot.balance).toFixed(2)}.`);
     const entry = await tx.gangCashEntry.create({
@@ -284,7 +284,7 @@ router.post('/cash/adjustments', asyncHandler(async (req, res) => {
   }).parse(req.body ?? {});
   const entry = await prisma.$transaction(async (tx) => {
     const snapshot = await cashSnapshot(tx);
-    if (!snapshot.initialized) throw new HttpError(409, 'Tetapkan saldo awal kas terlebih dahulu.');
+    if (!snapshot.initialized) throw new HttpError(409, 'Set the initial gang fund balance first.');
     const amountCents = toCents(data.amount);
     if (data.direction === 'OUT' && amountCents > snapshot.balance) {
       throw new HttpError(409, `Koreksi akan membuat saldo kas negatif. Saldo saat ini $${fromCents(snapshot.balance).toFixed(2)}.`);
