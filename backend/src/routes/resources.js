@@ -30,11 +30,11 @@ router.get(
 
     // Validasi nama file gambar
     if (!/^[a-f0-9-]{36}\.(jpg|png|webp|gif)$/i.test(key)) {
-      throw new HttpError(400, 'Nama file gambar tidak valid.');
+      throw new HttpError(400, 'Invalid image file name.');
     }
 
     if (!objectStorageEnabled) {
-      throw new HttpError(404, 'Penyimpanan gambar tidak tersedia.');
+      throw new HttpError(404, 'Image storage is unavailable.');
     }
 
     const imageUrl = await getImageUrl(key);
@@ -175,12 +175,12 @@ router.post('/', requireAdmin, asyncHandler(async (req, res) => {
 
 // Admin dapat mengunggah atau mengganti gambar resource yang sudah ada.
 router.post('/:id/image', requireAdmin, imageUpload.single('image'), asyncHandler(async (req, res) => {
-  if (!req.file) throw new HttpError(400, 'Pilih file gambar terlebih dahulu.');
+  if (!req.file) throw new HttpError(400, 'Please select an image file first.');
   const extension = imageExtension(req.file.buffer);
-  if (!extension) throw new HttpError(400, 'Format gambar harus JPG, PNG, WEBP, atau GIF.');
+  if (!extension) throw new HttpError(400, 'Image format must be JPG, PNG, WEBP, or GIF.');
 
   const current = await prisma.resource.findUnique({ where: { id: req.params.id } });
-  if (!current) throw new HttpError(404, 'Resource tidak ditemukan.');
+  if (!current) throw new HttpError(404, 'Resource not found.');
 
 const filename = `${randomUUID()}.${extension}`;
 const contentTypes = {
@@ -226,7 +226,7 @@ if (objectStorageEnabled) {
 // Admin dapat menghapus gambar dan kembali ke ikon bawaan.
 router.delete('/:id/image', requireAdmin, asyncHandler(async (req, res) => {
   const current = await prisma.resource.findUnique({ where: { id: req.params.id } });
-  if (!current) throw new HttpError(404, 'Resource tidak ditemukan.');
+  if (!current) throw new HttpError(404, 'Resource not found.');
   const updated = await prisma.$transaction(async (tx) => {
     const resource = await tx.resource.update({ where: { id: current.id }, data: { imageUrl: null } });
     await tx.activityLog.create({
@@ -240,16 +240,16 @@ router.delete('/:id/image', requireAdmin, asyncHandler(async (req, res) => {
 
 router.patch('/:id', requireAdmin, asyncHandler(async (req, res) => {
   const data = updateSchema.parse(req.body);
-  if (!Object.keys(data).length) throw new HttpError(400, 'Tidak ada perubahan yang dikirim.');
+  if (!Object.keys(data).length) throw new HttpError(400, 'No changes were submitted.');
 
   const resource = await prisma.$transaction(async (tx) => {
     const current = await tx.resource.findUnique({ where: { id: req.params.id } });
-    if (!current) throw new HttpError(404, 'Resource tidak ditemukan.');
+    if (!current) throw new HttpError(404, 'Resource not found.');
 
     if (data.sku) {
       const existingSku = await tx.resource.findUnique({ where: { sku: data.sku } });
       if (existingSku && existingSku.id !== current.id) {
-        throw new HttpError(409, 'SKU sudah digunakan oleh resource lain. Gunakan SKU yang berbeda.');
+        throw new HttpError(409, 'This SKU is already used by another resource. Please use a different SKU.');
       }
     }
 
@@ -272,7 +272,7 @@ router.patch('/:id/stock', requireAdmin, asyncHandler(async (req, res) => {
   const data = schema.parse(req.body);
   const result = await prisma.$transaction(async (tx) => {
     const current = await tx.resource.findUnique({ where: { id: req.params.id } });
-    if (!current) throw new HttpError(404, 'Resource tidak ditemukan.');
+    if (!current) throw new HttpError(404, 'Resource not found.');
     if (data.delta > 0) {
       await tx.resource.update({ where: { id: current.id }, data: { stockAvailable: { increment: data.delta } } });
     } else {
@@ -280,7 +280,7 @@ router.patch('/:id/stock', requireAdmin, asyncHandler(async (req, res) => {
         where: { id: current.id, stockAvailable: { gte: Math.abs(data.delta) } },
         data: { stockAvailable: { decrement: Math.abs(data.delta) } },
       });
-      if (changed.count !== 1) throw new HttpError(409, 'Stok tersedia tidak cukup untuk pengurangan tersebut.');
+      if (changed.count !== 1) throw new HttpError(409, 'Available stock is insufficient for this deduction.');
     }
     await tx.stockMovement.create({ data: { resourceId: current.id, userId: req.user.id, type: data.delta > 0 ? 'RESTOCK' : 'ADJUSTMENT', quantity: Math.abs(data.delta), note: data.note } });
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'STOCK_ADJUSTED', detail: `${data.delta > 0 ? 'Menambah' : 'Mengurangi'} ${Math.abs(data.delta)} ${current.unit} ${current.name}: ${data.note}` } });
