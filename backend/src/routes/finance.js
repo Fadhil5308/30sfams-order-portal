@@ -135,7 +135,7 @@ router.post('/spending-periods', asyncHandler(async (req, res) => {
   if (endAt && endAt < startAt) throw new HttpError(400, 'End date cannot be earlier than the start date.');
   const period = await prisma.$transaction(async (tx) => {
     const current = await tx.spendingPeriod.findFirst({ where: { isCurrent: true } });
-    if (current) throw new HttpError(409, 'Periode aktif sudah ada. Ubah rentangnya atau gunakan Reset Periode untuk membuat periode baru.');
+    if (current) throw new HttpError(409, 'An active period already exists. Change its date range or use Reset Period to create a new one.');
     const created = await tx.spendingPeriod.create({
       data: { name: data.name, startAt, endAt, isCurrent: true, createdById: req.user.id },
     });
@@ -145,7 +145,7 @@ router.post('/spending-periods', asyncHandler(async (req, res) => {
     } });
     return created;
   }, { isolationLevel: 'Serializable' });
-  res.status(201).json({ period: { ...period, summary: await spendingForPeriod(prisma, period) }, message: 'Periode pembelanjaan berhasil dibuat.' });
+  res.status(201).json({ period: { ...period, summary: await spendingForPeriod(prisma, period) }, message: 'Spending period created successfully.' });
 }));
 
 router.patch('/spending-periods/current', asyncHandler(async (req, res) => {
@@ -166,7 +166,7 @@ router.patch('/spending-periods/current', asyncHandler(async (req, res) => {
     } });
     return updated;
   });
-  res.json({ period: { ...period, summary: await spendingForPeriod(prisma, period) }, message: 'Rentang periode berhasil diperbarui.' });
+  res.json({ period: { ...period, summary: await spendingForPeriod(prisma, period) }, message: 'Period range updated successfully.' });
 }));
 
 router.post('/spending-periods/reset', asyncHandler(async (req, res) => {
@@ -179,7 +179,7 @@ router.post('/spending-periods/reset', asyncHandler(async (req, res) => {
   const startAt = data.startDate ? parseJakartaStart(data.startDate) : now;
   const result = await prisma.$transaction(async (tx) => {
     const oldPeriod = await tx.spendingPeriod.findFirst({ where: { isCurrent: true } });
-    if (oldPeriod && startAt <= oldPeriod.startAt) throw new HttpError(400, 'Tanggal mulai periode baru harus setelah tanggal mulai periode aktif.');
+    if (oldPeriod && startAt <= oldPeriod.startAt) throw new HttpError(400, 'The new period start date must be later than the active period start date.');
     if (oldPeriod) {
       const closedEnd = new Date(startAt.getTime() - 1);
       const endAt = oldPeriod.endAt && oldPeriod.endAt < closedEnd ? oldPeriod.endAt : closedEnd;
@@ -194,7 +194,7 @@ router.post('/spending-periods/reset', asyncHandler(async (req, res) => {
     } });
     return created;
   }, { isolationLevel: 'Serializable' });
-  res.status(201).json({ period: { ...result, summary: await spendingForPeriod(prisma, result) }, message: 'Periode baru berhasil dimulai. Nilai periode baru dihitung dari nol, sedangkan total sepanjang masa tetap tersimpan.' });
+  res.status(201).json({ period: { ...result, summary: await spendingForPeriod(prisma, result) }, message: 'New period started. The new period total starts at zero, while the lifetime total is preserved.' });
 }));
 
 router.get('/cash', asyncHandler(async (_req, res) => {
@@ -235,7 +235,7 @@ router.post('/cash/opening-balance', asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'GANG_CASH_OPENING_SET', detail: `Menetapkan saldo awal kas gang sebesar $${data.amount.toFixed(2)}.` } });
     return created;
   }, { isolationLevel: 'Serializable' });
-  res.status(201).json({ entry: { ...entry, amount: asNumber(entry.amount) }, message: 'Saldo awal kas gang berhasil disimpan.' });
+  res.status(201).json({ entry: { ...entry, amount: asNumber(entry.amount) }, message: 'Initial gang fund balance saved successfully.' });
 }));
 
 router.post('/cash/income', asyncHandler(async (req, res) => {
@@ -253,7 +253,7 @@ router.post('/cash/income', asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'GANG_CASH_MANUAL_INCOME', detail: `Menambahkan pemasukan kas $${data.amount.toFixed(2)} (${data.category}): ${data.description}` } });
     return created;
   }, { isolationLevel: 'Serializable' });
-  res.status(201).json({ entry: { ...entry, amount: asNumber(entry.amount) }, message: 'Penambahan saldo kas berhasil dicatat.' });
+  res.status(201).json({ entry: { ...entry, amount: asNumber(entry.amount) }, message: 'Gang fund deposit recorded successfully.' });
 }));
 
 router.post('/cash/expenses', asyncHandler(async (req, res) => {
@@ -266,14 +266,14 @@ router.post('/cash/expenses', asyncHandler(async (req, res) => {
     const snapshot = await cashSnapshot(tx);
     if (!snapshot.initialized) throw new HttpError(409, 'Set the initial gang fund balance first.');
     const amountCents = toCents(data.amount);
-    if (amountCents > snapshot.balance) throw new HttpError(409, `Saldo kas tidak mencukupi. Saldo saat ini $${fromCents(snapshot.balance).toFixed(2)}.`);
+    if (amountCents > snapshot.balance) throw new HttpError(409, `Insufficient gang fund balance. Current balance: $${fromCents(snapshot.balance).toFixed(2)}.`);
     const entry = await tx.gangCashEntry.create({
       data: { type: 'EXPENSE', amount: data.amount, category: data.category, description: data.description, createdById: req.user.id },
     });
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'GANG_CASH_EXPENSE', detail: `Pengeluaran kas $${data.amount.toFixed(2)} (${data.category}): ${data.description}` } });
     return entry;
   }, { isolationLevel: 'Serializable' });
-  res.status(201).json({ entry: { ...result, amount: asNumber(result.amount) }, message: 'Pengeluaran kas berhasil dicatat.' });
+  res.status(201).json({ entry: { ...result, amount: asNumber(result.amount) }, message: 'Gang fund expense recorded successfully.' });
 }));
 
 router.post('/cash/adjustments', asyncHandler(async (req, res) => {
@@ -287,7 +287,7 @@ router.post('/cash/adjustments', asyncHandler(async (req, res) => {
     if (!snapshot.initialized) throw new HttpError(409, 'Set the initial gang fund balance first.');
     const amountCents = toCents(data.amount);
     if (data.direction === 'OUT' && amountCents > snapshot.balance) {
-      throw new HttpError(409, `Koreksi akan membuat saldo kas negatif. Saldo saat ini $${fromCents(snapshot.balance).toFixed(2)}.`);
+      throw new HttpError(409, `This adjustment would make the gang fund balance negative. Current balance: $${fromCents(snapshot.balance).toFixed(2)}.`);
     }
     const type = data.direction === 'IN' ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT';
     const created = await tx.gangCashEntry.create({
@@ -306,6 +306,6 @@ router.post('/cash/adjustments', asyncHandler(async (req, res) => {
     } });
     return created;
   }, { isolationLevel: 'Serializable' });
-  res.status(201).json({ entry: { ...entry, amount: asNumber(entry.amount) }, message: `Koreksi saldo kas (${data.direction === 'IN' ? 'penambahan' : 'pengurangan'}) berhasil dicatat.` });
+  res.status(201).json({ entry: { ...entry, amount: asNumber(entry.amount) }, message: `Gang fund adjustment (${data.direction === 'IN' ? 'addition' : 'deduction'}) recorded successfully.` });
 }));
 export default router;
