@@ -590,7 +590,7 @@ router.patch('/users/:id/rank', asyncHandler(async (req, res) => {
     await tx.activityLog.create({ data: { userId: req.user.id, action: 'USER_RANK_UPDATED', detail: 'Mengubah rank ' + target.username + ' dari ' + target.rank + ' menjadi ' + data.rank + '.' } });
     return updated;
   });
-  res.json({ user, message: 'Rank for ' + user.username + ' was updated. });
+  res.json({ user, message: 'Rank for ' + user.username + ' was updated.' });
 }));
 
 router.patch('/users/:id/status', asyncHandler(async (req, res) => {
