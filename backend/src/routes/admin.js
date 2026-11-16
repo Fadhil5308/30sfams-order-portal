@@ -15,7 +15,7 @@ router.get('/integrations/discord', asyncHandler(async (_req, res) => {
 }));
 
 router.get('/dashboard', asyncHandler(async (_req, res) => {
-  const [statusRows, resourceTotals, stockRows, recentOrders] = await Promise.all([
+  const [statusRows, resourceTotals, stockRows, lowStockCandidates, recentOrders] = await Promise.all([
     prisma.order.groupBy({
       by: ['status'],
       _count: { _all: true },
@@ -31,6 +31,18 @@ router.get('/dashboard', asyncHandler(async (_req, res) => {
       by: ['category'],
       where: { isActive: true, category: { not: 'OTHER' } },
       _sum: { stockAvailable: true },
+    }),
+    prisma.resource.findMany({
+      where: {
+        isActive: true,
+        category: { not: 'OTHER' },
+        OR: [{ minStock: { gt: 0 } }, { stockAvailable: 0 }],
+      },
+      select: {
+        id: true, name: true, sku: true, category: true, unit: true,
+        stockAvailable: true, stockReserved: true, minStock: true,
+      },
+      orderBy: [{ stockAvailable: 'asc' }, { name: 'asc' }],
     }),
     prisma.order.findMany({
       where: { archivedAt: null },
@@ -60,7 +72,11 @@ router.get('/dashboard', asyncHandler(async (_req, res) => {
       completedQuantity: sum('COMPLETED', 'totalQuantity'),
       completedAmount: sum('COMPLETED', 'totalAmount'),
       activeResources: resourceTotals._count._all,
+      lowStockResources: lowStockCandidates.filter((resource) => resource.stockAvailable <= resource.minStock).length,
     },
+    lowStockResources: lowStockCandidates
+      .filter((resource) => resource.stockAvailable <= resource.minStock)
+      .slice(0, 8),
     stock: {
       available: resourceTotals._sum.stockAvailable || 0,
       reserved: resourceTotals._sum.stockReserved || 0,
