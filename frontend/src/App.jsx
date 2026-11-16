@@ -1285,25 +1285,24 @@ export default function App() {
   }, [user?.id, user?.role, page, loadPageData]);
 
   useEffect(() => {
-    if (!user || !loadedPages[currentPageKey]) return undefined;
+    // Warm only the two most commonly visited pages after the dashboard is ready.
+    // Avoid loading every admin/member page at startup: that creates unnecessary
+    // API and database traffic, especially when many members sign in together.
+    if (!user || page !== 'dashboard' || !loadedPages[currentPageKey]) return undefined;
     let cancelled = false;
     const commonPages = user.role === 'ADMIN'
-      ? ['catalog', 'inventory', 'stash', 'my-orders', 'admin-orders']
-      : ['catalog', 'favorites', 'my-orders'];
+      ? ['catalog', 'admin-orders']
+      : ['catalog', 'my-orders'];
 
     const prefetchCommonPages = async () => {
-      for (const targetPage of commonPages) {
-        if (cancelled) return;
-        if (targetPage === page) continue;
-        try {
-          await loadPageData(targetPage, user.role, false);
-        } catch {
-          // Prefetch is best-effort; the requested page reports its own loading error.
-        }
-      }
+      if (cancelled || document.visibilityState !== 'visible') return;
+      await Promise.allSettled(
+        commonPages.map((targetPage) => loadPageData(targetPage, user.role, false))
+      );
     };
 
-    const timer = window.setTimeout(prefetchCommonPages, 900);
+    // Give the first screen and its network requests priority.
+    const timer = window.setTimeout(prefetchCommonPages, 2000);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
