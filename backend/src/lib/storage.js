@@ -35,6 +35,8 @@ export async function uploadImage(key, buffer, contentType) {
       Key: key,
       Body: buffer,
       ContentType: contentType,
+      // Resource image keys are UUID-based and never overwritten in place.
+      CacheControl: 'private, max-age=3300, immutable',
     })
   );
 
