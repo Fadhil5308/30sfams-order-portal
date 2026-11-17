@@ -120,7 +120,7 @@ For production, configure object storage rather than relying on the local filesy
 | `npm run dev` | Start Express in watch mode |
 | `npm run db:generate` | Generate Prisma Client |
 | `npm run db:deploy` | Apply migrations already in the repository |
-| `npm run db:migrate -- --name <migration-name>` | Create/apply a new migration during development |
+| `npm run db:migrate -- --name add_feature_name` | Create/apply a new migration during development |
 | `npm run db:seed` | Create/update the seeded Super Admin |
 | `npm run db:studio` | Open Prisma Studio |
 
