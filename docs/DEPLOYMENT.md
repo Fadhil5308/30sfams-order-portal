@@ -74,24 +74,33 @@ The Vercel deployment status only confirms the deployment pipeline result; it do
 
 Run migrations from the `backend/` directory in a controlled release step, not by resetting the database.
 
-Example when using Vercel CLI to obtain the project's environment locally:
+For a migration, run the commands from the repository root first to link the correct Vercel project, then provide the Neon direct connection string to the backend CLI session:
 
 ```powershell
-cd backend
+# Run from the repository root.
 vercel link
-vercel env pull .env.production.local --environment=production
-```
 
-Treat the downloaded environment file as a secret. Ensure `DATABASE_URL_UNPOOLED` points to the direct Neon connection. Then review the migration status and SQL before applying:
+# Open the backend directory.
+cd backend
 
-```powershell
+# Enter the direct/unpooled Neon URL without displaying it in the terminal.
+$secureUrl = Read-Host "Neon direct (unpooled) connection string" -AsSecureString
+$env:DATABASE_URL_UNPOOLED = [System.Net.NetworkCredential]::new("", $secureUrl).Password
+
 npm.cmd ci
 npm.cmd run db:generate
 npx prisma migrate status
+
+# Run only after confirming the pending migration SQL and backup.
 npm.cmd run db:deploy
+
+Remove-Item Env:DATABASE_URL_UNPOOLED
+Remove-Variable secureUrl
 ```
 
-Run these commands only after confirming that the linked project, environment, and database are the intended production targets. Remove or securely store `.env.production.local` after the task. Do not commit it.
+This avoids relying on a `.env.production.local` file being loaded from the backend working directory. The Prisma CLI configuration reads `DATABASE_URL_UNPOOLED` before falling back to `DATABASE_URL`.
+
+Run these commands only after confirming that the linked project and database are the intended production targets. If your database has manually applied schema changes that are not recorded in Prisma migration history, stop and reconcile them before `db:deploy`. Do not commit secret environment files.
 
 **Migration caution:** some changes may have been applied manually in a hosted database during development. If the database schema is ahead of the Prisma migration history, stop and reconcile the migration history before running `db:deploy`. Never use `prisma migrate reset` or a destructive SQL shortcut on production.
 
