@@ -307,6 +307,7 @@ function Dashboard({ user, resources = [], orders = [], reports, dashboardData, 
 }
 function Catalog({ resources, cart, setCart, search, setSearch, category, setCategory, submitOrder, busy, favoriteIds = [], onToggleFavorite, favoriteOnly = false, showFavorites = true, isAdminMode = false }) {
   const [orderNotes, setOrderNotes] = useState('');
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 18;
   const filtered = useMemo(() => resources.filter((resource) => {
@@ -335,8 +336,13 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
   const hasUnavailableItems = cartItems.some((resource) =>
     resource.stockAvailable <= 0 || Number(cart[resource.id]) > resource.stockAvailable
   );
+  useEffect(() => {
+    if (cartItems.length > 0) setIsCartOpen(true);
+    else setIsCartOpen(false);
+  }, [cartItems.length]);
 
   function changeCart(id, delta, available) {
+    if (delta > 0) setIsCartOpen(true);
     setCart((current) => {
       const next = { ...current };
       const qty = (next[id] || 0) + delta;
@@ -346,6 +352,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
   }
 
   function setCartQuantity(id, value, available) {
+    if (value !== '' && Number(value) > 0) setIsCartOpen(true);
     setCart((current) => {
       const next = { ...current };
       if (value === '') {
@@ -373,7 +380,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
       eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'}
       title={favoriteOnly ? 'Favorite Resources' : 'Browse resources'}
       description={favoriteOnly ? 'Your saved favorite resources for future orders.' : isAdminMode ? 'Browse resources for your Super Admin account. Orders are placed under this account and appear in All Orders.' : 'Find the items you need, choose quantities, and review your order in the panel.'}
-      action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} units</span><strong>{money(cartTotal)}</strong></div>}
+      action={<button type="button" className="cart-summary cart-summary-trigger" onClick={() => cartItems.length && setIsCartOpen(true)} disabled={!cartItems.length} aria-expanded={isCartOpen} aria-label={"Open order summary, " + number(cartQty) + " units"}><ShoppingCart size={17} /><span>{number(cartQty)} units</span><strong>{money(cartTotal)}</strong></button>}
     />
 
     <div className="catalog-layout">
@@ -415,65 +422,69 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
         </> : <EmptyState icon={Search} title="No resources found" detail="Try changing your search term or category filter." />}
       </main>
 
-      <aside className="checkout-sidebar panel" aria-label="Order summary">
-        <div className="checkout-sidebar-header">
-          <div>
-            <span className="section-kicker">YOUR SELECTION</span>
-            <h3>Order summary</h3>
-            <p>{number(cartItems.length)} resource {cartItems.length === 1 ? 'type' : 'types'} selected</p>
+      {isCartOpen && <div className="checkout-popup-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsCartOpen(false); }}>
+        <aside className="checkout-sidebar checkout-popup panel" role="dialog" aria-modal="true" aria-label="Order summary">
+          <div className="checkout-sidebar-header">
+            <div>
+              <span className="section-kicker">YOUR SELECTION</span>
+              <h3>Order summary</h3>
+              <p>{number(cartItems.length)} resource {cartItems.length === 1 ? 'type' : 'types'} selected</p>
+            </div>
+            <div className="checkout-header-actions">
+              <div className="checkout-sidebar-icon"><ShoppingCart size={19} /></div>
+              <button type="button" className="checkout-close-button" onClick={() => setIsCartOpen(false)} aria-label="Close order summary"><X size={18} /></button>
+            </div>
           </div>
-          <div className="checkout-sidebar-icon"><ShoppingCart size={19} /></div>
-        </div>
 
-        {cartItems.length ? <>
-          <div className="checkout-cart-items">
-            {cartItems.map((resource) => {
-              const quantity = Number(cart[resource.id] || 0);
-              const available = Number(resource.stockAvailable || 0);
-              const exceedsStock = quantity > available || available <= 0;
-              return <div className="checkout-cart-item" key={resource.id}>
-                <div className="checkout-item-heading">
-                  <div className="checkout-item-name">
-                    <strong>{resource.name}</strong>
-                    <small>{categoryLabel(resource.category)} · {money(resource.unitPrice)} / {resource.unit}</small>
+          {cartItems.length ? <>
+            <div className="checkout-cart-items">
+              {cartItems.map((resource) => {
+                const quantity = Number(cart[resource.id] || 0);
+                const available = Number(resource.stockAvailable || 0);
+                const exceedsStock = quantity > available || available <= 0;
+                return <div className="checkout-cart-item" key={resource.id}>
+                  <div className="checkout-item-heading">
+                    <div className="checkout-item-name">
+                      <strong>{resource.name}</strong>
+                      <small>{categoryLabel(resource.category)} · {money(resource.unitPrice)} / {resource.unit}</small>
+                    </div>
+                    <button type="button" className="checkout-remove-button" onClick={() => setCartQuantity(resource.id, '', available)} disabled={busy} aria-label={'Remove ' + resource.name + ' from order'} title="Remove item"><X size={15} /></button>
                   </div>
-                  <button type="button" className="checkout-remove-button" onClick={() => setCartQuantity(resource.id, '', available)} disabled={busy} aria-label={'Remove ' + resource.name + ' from order'} title="Remove item"><X size={15} /></button>
-                </div>
-                <div className="checkout-item-controls">
-                  <div className="checkout-quantity-control">
-                    <button type="button" onClick={() => changeCart(resource.id, -1, available)} disabled={busy || quantity <= 1} aria-label={'Decrease ' + resource.name}>−</button>
-                    <input type="number" min="1" max={available} step="1" value={quantity} disabled={busy || available <= 0} onChange={(event) => setCartQuantity(resource.id, event.target.value, available)} aria-label={'Order quantity for ' + resource.name} />
-                    <button type="button" onClick={() => changeCart(resource.id, 1, available)} disabled={busy || quantity >= available || available <= 0} aria-label={'Increase ' + resource.name}>+</button>
+                  <div className="checkout-item-controls">
+                    <div className="checkout-quantity-control">
+                      <button type="button" onClick={() => changeCart(resource.id, -1, available)} disabled={busy || quantity <= 1} aria-label={'Decrease ' + resource.name}>−</button>
+                      <input type="number" min="1" max={available} step="1" value={quantity} disabled={busy || available <= 0} onChange={(event) => setCartQuantity(resource.id, event.target.value, available)} aria-label={'Order quantity for ' + resource.name} />
+                      <button type="button" onClick={() => changeCart(resource.id, 1, available)} disabled={busy || quantity >= available || available <= 0} aria-label={'Increase ' + resource.name}>+</button>
+                    </div>
+                    <strong>{money(quantity * Number(resource.unitPrice || 0))}</strong>
                   </div>
-                  <strong>{money(quantity * Number(resource.unitPrice || 0))}</strong>
-                </div>
-                {exceedsStock && <small className="checkout-stock-warning">Available stock changed. Adjust this quantity before submitting.</small>}
-              </div>;
-            })}
+                  {exceedsStock && <small className="checkout-stock-warning">Available stock changed. Adjust this quantity before submitting.</small>}
+                </div>;
+              })}
+            </div>
+            <button type="button" className="checkout-clear-button" onClick={clearCart} disabled={busy}>Clear order</button>
+          </> : <div className="checkout-empty">
+            <ShoppingCart size={25} />
+            <strong>Your order is empty</strong>
+            <span>Select resources from the catalog to see the details here.</span>
+          </div>}
+
+          <div className="checkout-notes checkout-sidebar-notes">
+            <label htmlFor="order-notes"><span>Note for admin <small>(optional)</small></span><textarea id="order-notes" maxLength={500} rows={3} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Add instructions for your order..." /></label>
+            <div className="notes-counter">{orderNotes.length}/500 characters</div>
           </div>
-          <button type="button" className="checkout-clear-button" onClick={clearCart} disabled={busy}>Clear order</button>
-        </> : <div className="checkout-empty">
-          <ShoppingCart size={25} />
-          <strong>Your order is empty</strong>
-          <span>Select resources from the catalog to see the details here.</span>
-        </div>}
 
-        <div className="checkout-notes checkout-sidebar-notes">
-          <label htmlFor="order-notes"><span>Note for admin <small>(optional)</small></span><textarea id="order-notes" maxLength={500} rows={3} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Add instructions for your order..." /></label>
-          <div className="notes-counter">{orderNotes.length}/500 characters</div>
-        </div>
-
-        <div className="checkout-sidebar-total">
-          <div><span>Total quantity</span><strong>{number(cartQty)} units</strong></div>
-          <div className="checkout-grand-total"><span>Total amount</span><strong>{money(cartTotal)}</strong></div>
-        </div>
-        {hasUnavailableItems && <p className="checkout-stock-alert">One or more selected quantities exceed the latest available stock.</p>}
-        <button type="button" className="button button-primary button-full checkout-submit-button" disabled={!cartQty || hasUnavailableItems || busy} onClick={() => submitOrder(orderNotes)}>
-          {busy ? 'Submitting order...' : 'Submit order'} <ArrowUpRight size={16} />
-        </button>
-        <p className="checkout-sidebar-footnote">Stock is reserved when the order is submitted. Please review the items and quantities before continuing.</p>
-      </aside>
-    </div>
+          <div className="checkout-sidebar-total">
+            <div><span>Total quantity</span><strong>{number(cartQty)} units</strong></div>
+            <div className="checkout-grand-total"><span>Total amount</span><strong>{money(cartTotal)}</strong></div>
+          </div>
+          {hasUnavailableItems && <p className="checkout-stock-alert">One or more selected quantities exceed the latest available stock.</p>}
+          <button type="button" className="button button-primary button-full checkout-submit-button" disabled={!cartQty || hasUnavailableItems || busy} onClick={() => submitOrder(orderNotes)}>
+            {busy ? 'Submitting order...' : 'Submit order'} <ArrowUpRight size={16} />
+          </button>
+          <p className="checkout-sidebar-footnote">Stock is reserved when the order is submitted. Please review the items and quantities before continuing.</p>
+        </aside>
+      </div>}    </div>
   </>;
 }
 
