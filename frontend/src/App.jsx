@@ -419,7 +419,9 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
           <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
         </> : <EmptyState icon={Search} title="No resources found" detail="Try changing your search term or category filter." />}
 
-        {cartItems.length > 0 && <section ref={checkoutRef} className="checkout-sidebar checkout-inline panel" aria-labelledby="checkout-title">
+
+      </main>
+      {cartItems.length > 0 && <section ref={checkoutRef} className="checkout-sidebar checkout-inline panel" aria-labelledby="checkout-title">
           <div className="checkout-sidebar-header">
             <div>
               <span className="section-kicker">YOUR SELECTION</span>
@@ -471,7 +473,6 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
           </button>
           <p className="checkout-sidebar-footnote">Stock is reserved when the order is submitted. Please review the items and quantities before continuing.</p>
         </section>}
-      </main>
     </div>
   </>;
 }
