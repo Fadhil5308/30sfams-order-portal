@@ -955,7 +955,7 @@ function FinancePage({ finance, cash, onStartPeriod, onUpdatePeriod, onResetPeri
   </>;
 }
 
-function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart, busy }) {
+function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart, busy, onAddedToCart }) {
   const [page, setPage] = useState(1);
   const pageSize = 18;
   const favorites = resources.filter((resource) => favoriteIds.includes(resource.id));
@@ -963,6 +963,7 @@ function FavoritesPage({ resources, favoriteIds, onToggleFavorite, cart, setCart
   useEffect(() => setPage(1), [resources, favoriteIds]);
   function addToCart(resource) {
     setCart((current) => ({ ...current, [resource.id]: Math.min((current[resource.id] || 0) + 1, resource.stockAvailable) }));
+    onAddedToCart?.();
   }
   return <>
     <SectionHeader eyebrow="SAVED RESOURCES" title="Favorite Resources" description="Save frequently ordered items for faster access." />
@@ -1885,7 +1886,7 @@ ${approved} Approved orders will return reserved stock to available stock. Compl
         {page === 'stash' && isAdmin && <StashPage resources={stashResources} onCreate={createResource} onStock={adjustStock} busy={busy} />}
         {page === 'stock-history' && isAdmin && <StockMovementPage movements={stockMovements} />}
         {page === 'member-stats' && isAdmin && <MemberStatsPage data={memberStats} />}
-        {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} />}
+        {page === 'favorites' && !isAdmin && <FavoritesPage resources={resources} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} cart={cart} setCart={setCart} busy={busy} onAddedToCart={() => setPage("catalog")} />}
         {page === 'admin-orders' && isAdmin && <><SectionHeader eyebrow="ORDER MANAGEMENT" title="All Orders" description="Review requests, approve stock reservations, and mark orders as Completed once resources have been handed over. Reservations do not expire automatically and are managed manually by admins." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(orders)} disabled={!orders.length}><ArrowDownToLine size={15}/> Export CSV</button><button className="button button-outline" onClick={cancelAllActiveOrders} disabled={busy || !orders.some((order) => ['PENDING', 'APPROVED'].includes(order.status))}><XCircle size={15}/> Cancel Active Orders</button><button className="button button-ghost-danger" onClick={archiveAllOrders} disabled={busy || !orders.length}><Archive size={15}/> Archive All</button><div className="date-chip"><ClipboardList size={15} /> {number(orders.length)} active orders</div></div>} /><div className="panel"><OrderTable orders={orders} isAdmin onAction={orderAction} onDetails={openOrderDetails} busy={busy} /></div></>}
         {page === 'archived-orders' && isAdmin && <><SectionHeader eyebrow="ORDER ARCHIVE" title="Archived Orders" description="All archived orders. Data remains available for details, invoices, reports, and audits." action={<div className="header-actions"><button className="button button-outline" onClick={() => exportOrdersForExcel(archivedOrders)} disabled={!archivedOrders.length}><ArrowDownToLine size={15}/> Export Archive CSV</button><div className="date-chip"><Archive size={15} /> {number(archivedOrders.length)} archived</div></div>} /><div className="panel"><OrderTable orders={archivedOrders} isAdmin readOnly isArchived onDetails={openOrderDetails} onRestore={restoreArchivedOrder} busy={busy} /></div></>}
         {page === 'reports' && isAdmin && <Reports reports={reports} />}
