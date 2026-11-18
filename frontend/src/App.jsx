@@ -381,7 +381,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
       action={cartItems.length > 0 ? <button type="button" className="cart-summary cart-summary-trigger" onClick={scrollToOrderDetails} aria-label={"Go to order details, " + number(cartQty) + " units"}><ShoppingCart size={17} /><span>{number(cartQty)} units</span><strong>{money(cartTotal)}</strong></button> : null}
     />
 
-    <div className="catalog-layout">
+    <div className={`catalog-layout${cartItems.length > 0 ? " has-cart" : ""}`}>
       <main className="catalog-main">
         <div className="catalog-toolbar">
           <div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource name or SKU..." /></div>
