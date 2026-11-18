@@ -311,7 +311,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
   const pageSize = 18;
   const filtered = useMemo(() => resources.filter((resource) => {
     const matchCategory = category === 'ALL' || resource.category === category;
-    const matchSearch = `${resource.name} ${resource.sku} ${resource.description}`.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = [resource.name, resource.sku, resource.description].join(' ').toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch && (!favoriteOnly || favoriteIds.includes(resource.id));
   }), [resources, category, search, favoriteOnly, favoriteIds]);
   const visibleResources = useMemo(
@@ -319,9 +319,23 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
     [filtered, page]
   );
   useEffect(() => setPage(1), [search, category, resources, favoriteIds, favoriteOnly]);
-  const cartItems = useMemo(() => resources.filter((resource) => cart[resource.id] > 0), [resources, cart]);
-  const cartQty = useMemo(() => cartItems.reduce((sum, resource) => sum + cart[resource.id], 0), [cartItems, cart]);
-  const cartTotal = useMemo(() => cartItems.reduce((sum, resource) => sum + cart[resource.id] * resource.unitPrice, 0), [cartItems, cart]);
+
+  const cartItems = useMemo(
+    () => resources.filter((resource) => Number(cart[resource.id]) > 0),
+    [resources, cart]
+  );
+  const cartQty = useMemo(
+    () => cartItems.reduce((sum, resource) => sum + Number(cart[resource.id] || 0), 0),
+    [cartItems, cart]
+  );
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, resource) => sum + Number(cart[resource.id] || 0) * Number(resource.unitPrice || 0), 0),
+    [cartItems, cart]
+  );
+  const hasUnavailableItems = cartItems.some((resource) =>
+    resource.stockAvailable <= 0 || Number(cart[resource.id]) > resource.stockAvailable
+  );
+
   function changeCart(id, delta, available) {
     setCart((current) => {
       const next = { ...current };
@@ -330,6 +344,7 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
       return next;
     });
   }
+
   function setCartQuantity(id, value, available) {
     setCart((current) => {
       const next = { ...current };
@@ -346,22 +361,119 @@ function Catalog({ resources, cart, setCart, search, setSearch, category, setCat
       return next;
     });
   }
+
+  function clearCart() {
+    if (!cartItems.length || busy) return;
+    if (!window.confirm('Remove all selected resources from this order?')) return;
+    setCart({});
+  }
+
   return <>
-    <SectionHeader eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'} title={favoriteOnly ? 'Favorite Resources' : 'Browse resources'} description={favoriteOnly ? 'Your saved favorite resources for future orders.' : isAdminMode ? 'Browse resources for your Super Admin account. Orders are placed under this account and appear in All Orders.' : 'Find the items you need, choose quantities, and submit your order for admin review.'} action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} units</span><strong>{money(cartTotal)}</strong></div>} />
-    <div className="catalog-toolbar"><div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource name or SKU..." /></div><div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">All categories</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div></div>
-    {filtered.length ? <><div className="resource-grid">{visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
-      <div className={`resource-art ${resource.category.toLowerCase()} ${resource.imageUrl ? 'with-photo' : ''}`}>
-        {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
-        <div className="resource-art-grid" /><span>{categoryLabel(resource.category)}</span>
-        {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
-        <small>{resource.sku}</small>
-      </div>
-      <div className="resource-card-body"><div className="resource-name-row"><h3>{resource.name}</h3>{showFavorites && <button type="button" className={`favorite-toggle ${favoriteIds.includes(resource.id) ? 'active' : ''}`} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'} aria-label={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}<span className={`stock-tag ${resource.stockAvailable > 0 ? 'in-stock' : 'out-stock'}`}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span></div><p>{resource.description || 'No description available for this resource.'}</p><div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div><div className="resource-meta"><span>Available Stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
-        <div className="resource-action"><div className="quantity-control"><button type="button" onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} disabled={!cart[resource.id] || busy} aria-label={`Decrease quantity for ${resource.name}`}>−</button><input className="quantity-input" type="number" inputMode="numeric" min="0" max={resource.stockAvailable} step="1" value={cart[resource.id] || ''} placeholder="0" disabled={resource.stockAvailable <= 0 || busy} onChange={(event) => setCartQuantity(resource.id, event.target.value, resource.stockAvailable)} aria-label={`Quantity for ${resource.name}`} /><button type="button" onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={resource.stockAvailable <= 0 || busy || (cart[resource.id] || 0) >= resource.stockAvailable} aria-label={`Increase quantity for ${resource.name}`}>+</button></div></div>
-      </div>
-    </article>)}</div><DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} /></> : <EmptyState icon={Search} title="No resources found" detail="Try changing your search term or category filter." />}
-    <div className="checkout-notes panel"><label htmlFor="order-notes"><span>Note for admin <small>(optional, up to 500 characters)</small></span><textarea id="order-notes" maxLength={500} rows={2} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Example: Please process this for tonight’s event." /></label><div className="notes-counter">{orderNotes.length}/500 characters</div></div>
-    <div className="order-cart-bar"><div><span className="cart-label">ORDER CART</span><strong>{number(cartQty)} units <span>·</span> {money(cartTotal)}</strong></div><button className="button button-primary" disabled={!cartQty || busy} onClick={() => submitOrder(orderNotes)}>{busy ? 'Submitting...' : 'Submit order'} <ArrowUpRight size={16} /></button></div>
+    <SectionHeader
+      eyebrow={favoriteOnly ? 'SAVED RESOURCES' : 'RESOURCE CATALOG'}
+      title={favoriteOnly ? 'Favorite Resources' : 'Browse resources'}
+      description={favoriteOnly ? 'Your saved favorite resources for future orders.' : isAdminMode ? 'Browse resources for your Super Admin account. Orders are placed under this account and appear in All Orders.' : 'Find the items you need, choose quantities, and review your order in the panel.'}
+      action={<div className="cart-summary"><ShoppingCart size={17} /><span>{number(cartQty)} units</span><strong>{money(cartTotal)}</strong></div>}
+    />
+
+    <div className="catalog-layout">
+      <main className="catalog-main">
+        <div className="catalog-toolbar">
+          <div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource name or SKU..." /></div>
+          <div className="filter-select"><SlidersHorizontal size={16} /><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="ALL">All categories</option>{CATEGORIES.map((item) => <option value={item} key={item}>{categoryLabel(item)}</option>)}</select><ChevronDown size={15} /></div>
+        </div>
+
+        {filtered.length ? <>
+          <div className="resource-grid">
+            {visibleResources.map((resource) => <article className="resource-card" key={resource.id}>
+              <div className={'resource-art ' + resource.category.toLowerCase() + (resource.imageUrl ? ' with-photo' : '')}>
+                {resource.imageUrl && <img className="resource-art-photo" src={assetUrl(resource.imageUrl)} alt={resource.name} loading="lazy" decoding="async" />}
+                <div className="resource-art-grid" /><span>{categoryLabel(resource.category)}</span>
+                {!resource.imageUrl && <div className="resource-art-icon"><Package size={30} /></div>}
+                <small>{resource.sku}</small>
+              </div>
+              <div className="resource-card-body">
+                <div className="resource-name-row">
+                  <h3>{resource.name}</h3>
+                  {showFavorites && <button type="button" className={'favorite-toggle ' + (favoriteIds.includes(resource.id) ? 'active' : '')} onClick={() => onToggleFavorite?.(resource)} title={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'} aria-label={favoriteIds.includes(resource.id) ? 'Remove from favorites' : 'Add to favorites'}><Star size={16} fill={favoriteIds.includes(resource.id) ? 'currentColor' : 'none'} /></button>}
+                  <span className={'stock-tag ' + (resource.stockAvailable > 0 ? 'in-stock' : 'out-stock')}>{resource.stockAvailable > 0 ? 'Available' : 'Out of stock'}</span>
+                </div>
+                <p>{resource.description || 'No description available for this resource.'}</p>
+                <div className="resource-meta"><span>Price / {resource.unit}</span><strong>{money(resource.unitPrice)}</strong></div>
+                <div className="resource-meta"><span>Available Stock</span><strong>{number(resource.stockAvailable)} {resource.unit}</strong></div>
+                <div className="resource-action">
+                  <div className="quantity-control">
+                    <button type="button" onClick={() => changeCart(resource.id, -1, resource.stockAvailable)} disabled={!cart[resource.id] || busy} aria-label={'Decrease quantity for ' + resource.name}>−</button>
+                    <input className="quantity-input" type="number" inputMode="numeric" min="0" max={resource.stockAvailable} step="1" value={cart[resource.id] || ''} placeholder="0" disabled={resource.stockAvailable <= 0 || busy} onChange={(event) => setCartQuantity(resource.id, event.target.value, resource.stockAvailable)} aria-label={'Quantity for ' + resource.name} />
+                    <button type="button" onClick={() => changeCart(resource.id, 1, resource.stockAvailable)} disabled={resource.stockAvailable <= 0 || busy || (cart[resource.id] || 0) >= resource.stockAvailable} aria-label={'Increase quantity for ' + resource.name}>+</button>
+                  </div>
+                </div>
+              </div>
+            </article>)}
+          </div>
+          <DataPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} />
+        </> : <EmptyState icon={Search} title="No resources found" detail="Try changing your search term or category filter." />}
+      </main>
+
+      <aside className="checkout-sidebar panel" aria-label="Order summary">
+        <div className="checkout-sidebar-header">
+          <div>
+            <span className="section-kicker">YOUR SELECTION</span>
+            <h3>Order summary</h3>
+            <p>{number(cartItems.length)} resource {cartItems.length === 1 ? 'type' : 'types'} selected</p>
+          </div>
+          <div className="checkout-sidebar-icon"><ShoppingCart size={19} /></div>
+        </div>
+
+        {cartItems.length ? <>
+          <div className="checkout-cart-items">
+            {cartItems.map((resource) => {
+              const quantity = Number(cart[resource.id] || 0);
+              const available = Number(resource.stockAvailable || 0);
+              const exceedsStock = quantity > available || available <= 0;
+              return <div className="checkout-cart-item" key={resource.id}>
+                <div className="checkout-item-heading">
+                  <div className="checkout-item-name">
+                    <strong>{resource.name}</strong>
+                    <small>{categoryLabel(resource.category)} · {money(resource.unitPrice)} / {resource.unit}</small>
+                  </div>
+                  <button type="button" className="checkout-remove-button" onClick={() => setCartQuantity(resource.id, '', available)} disabled={busy} aria-label={'Remove ' + resource.name + ' from order'} title="Remove item"><X size={15} /></button>
+                </div>
+                <div className="checkout-item-controls">
+                  <div className="checkout-quantity-control">
+                    <button type="button" onClick={() => changeCart(resource.id, -1, available)} disabled={busy || quantity <= 1} aria-label={'Decrease ' + resource.name}>−</button>
+                    <input type="number" min="1" max={available} step="1" value={quantity} disabled={busy || available <= 0} onChange={(event) => setCartQuantity(resource.id, event.target.value, available)} aria-label={'Order quantity for ' + resource.name} />
+                    <button type="button" onClick={() => changeCart(resource.id, 1, available)} disabled={busy || quantity >= available || available <= 0} aria-label={'Increase ' + resource.name}>+</button>
+                  </div>
+                  <strong>{money(quantity * Number(resource.unitPrice || 0))}</strong>
+                </div>
+                {exceedsStock && <small className="checkout-stock-warning">Available stock changed. Adjust this quantity before submitting.</small>}
+              </div>;
+            })}
+          </div>
+          <button type="button" className="checkout-clear-button" onClick={clearCart} disabled={busy}>Clear order</button>
+        </> : <div className="checkout-empty">
+          <ShoppingCart size={25} />
+          <strong>Your order is empty</strong>
+          <span>Select resources from the catalog to see the details here.</span>
+        </div>}
+
+        <div className="checkout-notes checkout-sidebar-notes">
+          <label htmlFor="order-notes"><span>Note for admin <small>(optional)</small></span><textarea id="order-notes" maxLength={500} rows={3} value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} placeholder="Add instructions for your order..." /></label>
+          <div className="notes-counter">{orderNotes.length}/500 characters</div>
+        </div>
+
+        <div className="checkout-sidebar-total">
+          <div><span>Total quantity</span><strong>{number(cartQty)} units</strong></div>
+          <div className="checkout-grand-total"><span>Total amount</span><strong>{money(cartTotal)}</strong></div>
+        </div>
+        {hasUnavailableItems && <p className="checkout-stock-alert">One or more selected quantities exceed the latest available stock.</p>}
+        <button type="button" className="button button-primary button-full checkout-submit-button" disabled={!cartQty || hasUnavailableItems || busy} onClick={() => submitOrder(orderNotes)}>
+          {busy ? 'Submitting order...' : 'Submit order'} <ArrowUpRight size={16} />
+        </button>
+        <p className="checkout-sidebar-footnote">Stock is reserved when the order is submitted. Please review the items and quantities before continuing.</p>
+      </aside>
+    </div>
   </>;
 }
 
